@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { GLSL_COMMON, GLYPH_FRAG } from './glyphs.js';
+import { buildInterior, ORGAN_VERT } from './anatomy.js';
 
 // ---------------------------------------------------------------------------
 // La figura: la malla del maniquí nunca se dibuja. Solo presta su esqueleto.
@@ -17,7 +18,7 @@ const VERT = /* glsl */ `
   uniform mat4 bindMatrix;
   uniform mat4 bindMatrixInverse;
   uniform float uTime, uSize, uProj, uOpacity, uAssemble, uScanY, uScanOn, uPulse, uGlitch,
-                uFlick, uTintMix, uPart, uFloorY, uSpark, uHeight;
+                uFlick, uTintMix, uPart, uFloorY, uSpark, uHeight, uSkin;
   attribute vec4 skinIndex;
   attribute vec4 skinWeight;
   attribute vec4 aRand; // semilla, ritmo, capa (0 glifo legible / 1 polvo), libre
@@ -131,7 +132,7 @@ const VERT = /* glsl */ `
     col = mix(col, blue, uTintMix);
 
     vColor = col;
-    vAlpha = clamp(bright, 0.0, 2.2) * alpha * uOpacity * mix(0.0, 1.0, a) * (0.35 + 0.65 * a);
+    vAlpha = clamp(bright, 0.0, 2.2) * alpha * uOpacity * uSkin * mix(0.0, 1.0, a) * (0.35 + 0.65 * a);
     vGlyph = glyph;
     gl_PointSize = size * uProj / -mv.z;
   }
@@ -311,6 +312,12 @@ export class Figure {
     this.shared = shared; // uniforms compartidos
     this.instances = [];
     this.height = 1.8;
+    // uniformes del interior (corazón, pulmones...), compartidos con main.js
+    this.organU = {
+      uInterior: { value: 0 }, uBeat: { value: 0 }, uBeatPhase: { value: 0 }, uBreath: { value: 0 },
+      uFocusHeart: { value: 0 }, uFocusBrain: { value: 0 }, uFocusLesion: { value: 0 },
+      uNerves: { value: 0 }, uLesion: { value: 1 }, uVessels: { value: 1 },
+    };
   }
 
   async load(url, onProgress, quality) {
@@ -352,6 +359,12 @@ export class Figure {
     this.headFwdLocal = new THREE.Vector3(0, 0, 1).applyQuaternion(_q.clone().invert()).normalize();
 
     this.clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
+
+    // interior anatómico, medido sobre esta malla en su pose de reposo
+    const inner = buildInterior(src, quality.organs ?? 1);
+    this.interiorGeo = inner.geo;
+    this.anchors = inner.anchors;
+    this.organCount = inner.count;
   }
 
   makeInstance({ main = false, tint = 0, drawFraction = 1 } = {}) {
@@ -389,6 +402,7 @@ export class Figure {
           uOpacity: { value: 1 },
           uTintMix: { value: tint },
           uPart: { value: o.name.includes('Joints') ? 1 : 0 },
+          uSkin: main ? this.shared.uSkin : { value: 1 },
         },
       });
       const geo = this.geos[o.name];
@@ -405,6 +419,35 @@ export class Figure {
       this.scene.add(pts);
       inst.points.push({ pts, mesh: o });
     });
+
+    // el interior solo lo lleva la figura principal
+    if (main) {
+      const surf = inst.points.find((q) => q.mesh.name.includes('Surface')).mesh;
+      const mat = new THREE.ShaderMaterial({
+        vertexShader: ORGAN_VERT,
+        fragmentShader: GLYPH_FRAG,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          ...this.organU,
+          uTime: this.shared.uTime, uProj: this.shared.uProj, uFlick: this.shared.uFlick, uAtlas: this.shared.uAtlas,
+          uSize: { value: 0.017 },
+          boneTexture: { value: surf.skeleton.boneTexture },
+          bindMatrix: { value: surf.bindMatrix },
+          bindMatrixInverse: { value: surf.bindMatrixInverse },
+          uOpacity: { value: 1 },
+        },
+      });
+      const pts = new THREE.Points(this.interiorGeo, mat);
+      pts.frustumCulled = false;
+      pts.matrixAutoUpdate = false;
+      pts.matrixWorldAutoUpdate = false;
+      pts.renderOrder = 3;
+      this.scene.add(pts);
+      inst.points.push({ pts, mesh: surf });
+      inst.interior = pts;
+    }
 
     for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'HeadTop_End',
       'RightArm', 'RightForeArm', 'RightHand', 'LeftArm', 'LeftForeArm', 'LeftHand',

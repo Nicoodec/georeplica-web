@@ -4,6 +4,7 @@ import Lenis from 'lenis';
 import { makeGlyphAtlas } from './glyphs.js';
 import { Figure, makeFloor } from './figure.js';
 import { Territory, ZONES, terrainH, riverX } from './territory.js';
+import { Clinic } from './clinic.js';
 import { KEYS, DEFAULTS, mobileAdjust } from './script.js';
 import { Labels } from './labels.js';
 import { initText, scramble } from './text.js';
@@ -19,8 +20,8 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isNarrow = () => innerWidth < 820;
 const lowPower = isNarrow() || (navigator.hardwareConcurrency || 8) <= 4;
 const QUALITY = lowPower
-  ? { glyph: 1900, dust: 30000, terrain: 200, structStep: 0.62, arcDensity: 2 }
-  : { glyph: 2800, dust: 56000, terrain: 300, structStep: 0.44, arcDensity: 3 };
+  ? { glyph: 1900, dust: 30000, terrain: 200, structStep: 0.62, arcDensity: 2, organs: 0.6, clinicStep: 0.7 }
+  : { glyph: 2800, dust: 56000, terrain: 300, structStep: 0.44, arcDensity: 3, organs: 1, clinicStep: 0.55 };
 
 // ---------------------------------------------------------------- render
 const canvas = $('#gl');
@@ -46,6 +47,7 @@ const shared = {
   uFloorY: { value: 0 },
   uSpark: { value: 1 },
   uHeight: { value: 1.8 },
+  uSkin: { value: 1 },
   uAtlas: { value: null },
 };
 
@@ -170,7 +172,7 @@ function worldFromEl(sel, planeZ) {
 
 // ---------------------------------------------------------------- arranque
 const labels = new Labels($('#labels'), $('#hud'));
-let figure, main, ghosts = [], floor, territory;
+let figure, main, ghosts = [], floor, territory, clinic;
 let lenis;
 const boot = $('#boot');
 
@@ -196,17 +198,19 @@ async function start() {
     g.k = k;
     g.actions.idle.setEffectiveWeight(0);
     g.actions.walk.setEffectiveWeight(1);
+    g.actions.idle.time = g.k * 0.9;
     figure.setOpacity(g, 0);
     ghosts.push(g);
   }
   floor = makeFloor(scene, shared, lowPower ? 1600 : 2600);
   territory = new Territory(scene, shared, QUALITY);
+  clinic = new Clinic(scene, shared, QUALITY);
 
   const n = figure.pointCount.toLocaleString('es-ES');
   $('#ptsCount').textContent = n;
   document.querySelectorAll('[data-pts]').forEach((el) => (el.textContent = n));
 
-  labels.build({ figure, main, ghosts, territory, ZONES, terrainH, riverX });
+  labels.build({ figure, main, ghosts, territory, clinic, ZONES, terrainH, riverX, vitals });
 
   resize();
   boot.style.setProperty('--load-eye', '1');
@@ -243,7 +247,7 @@ async function start() {
   }, reduced ? 0 : 1500);
 
   if (import.meta.env.DEV) window.go = (id, p) => { lenis.resize(); const L = layout.find((l) => l.el.id === id); lenis.scrollTo(L.top + Math.max(L.h - innerHeight, 0) * p, { immediate: true }); };
-  if (import.meta.env.DEV) window.__dbg = { lenis, layout: () => layout, figure, main, ghosts, camera, state, target, territory, scene, renderer, shared };
+  if (import.meta.env.DEV) window.__dbg = { lenis, layout: () => layout, clinic, vitals, figure, main, ghosts, camera, state, target, territory, scene, renderer, shared };
   if (import.meta.env.DEV) window.__replay = () => { assembleT0 = performance.now(); };
   if (import.meta.env.DEV) {
     const q = new URLSearchParams(location.search);
@@ -263,6 +267,9 @@ const camTgt = new THREE.Vector3();
 const camPos = new THREE.Vector3();
 let wR = 0, wL = 0, side = 'Right';
 let nodW = 0, nodUntil = 0;
+// constantes del gemelo: el corazón late de verdad a este ritmo y el electro lo dibuja
+const vitals = { bpm: 66, phase: 0, beat: 0, breath: 0, rpm: 14 };
+const beatShape = (ph) => Math.exp(-(((ph - 0.26) / 0.045) ** 2)) + 0.45 * Math.exp(-(((ph - 0.44) / 0.06) ** 2));
 let fps = 60;
 
 function loop(now) {
@@ -299,6 +306,26 @@ function loop(now) {
   shared.uPulse.value = S.pulse;
   shared.uSpark.value = S.spark;
   shared.uSize.value = S.glyphSize;
+  shared.uSkin.value = S.skin;
+
+  // latido y respiración; en la sección del corazón, el pulso sube si se desplaza deprisa
+  const effort = Math.min(Math.abs(lenis.velocity || 0) * 0.9, 70) * S.hrReact;
+  vitals.bpm = damp(vitals.bpm, 66 + effort, effort > vitals.bpm - 66 ? 2.2 : 0.35, dt);
+  vitals.rpm = 14 + (vitals.bpm - 66) * 0.12;
+  vitals.phase += dt * vitals.bpm / 60;
+  vitals.beat = beatShape(vitals.phase % 1);
+  vitals.breath = Math.sin(t * Math.PI * 2 * vitals.rpm / 60);
+  const O = figure.organU;
+  O.uInterior.value = S.interior;
+  O.uBeat.value = vitals.beat;
+  O.uBeatPhase.value = vitals.phase;
+  O.uBreath.value = vitals.breath;
+  O.uFocusHeart.value = S.fHeart;
+  O.uFocusBrain.value = S.fBrain;
+  O.uFocusLesion.value = S.fLesion;
+  O.uNerves.value = S.nerves;
+  O.uLesion.value = S.lesion;
+  O.uVessels.value = S.vessels;
 
   // cámara
   camPos.set(S.camX, S.camY, S.camZ);
@@ -319,6 +346,7 @@ function loop(now) {
   main.holder.position.set(S.figX, 0, S.figZ);
   main.holder.rotation.y = S.figRot;
   figure.setOpacity(main, S.figOpacity);
+  main.interior.visible = main.visible && S.interior > 0.002;
   // asiente cuando alguien se acerca al correo
   nodW = damp(nodW, t < nodUntil ? 1 : 0, 6, dt);
   if (nodW < 0.01 && t >= nodUntil) main.actions.agree.time = 0;
@@ -360,14 +388,27 @@ function loop(now) {
   // fantasmas del futuro
   const fwd = new THREE.Vector3(Math.sin(S.figRot), 0, Math.cos(S.figRot));
   const dur = main.actions.walk.getClip().duration;
+  // ...o, en la sección del tratamiento, las alternativas que no se eligen
+  const trialMode = S.trial > S.ghosts;
   ghosts.forEach((g) => {
-    const op = S.ghosts * (0.78 - (g.k - 1) * 0.17);
+    const op = trialMode ? (g.k <= 2 ? S.trial * 0.62 : 0) : S.ghosts * (0.78 - (g.k - 1) * 0.17);
     figure.setOpacity(g, op);
     if (!g.visible) return;
-    g.holder.position.set(S.figX, 0, S.figZ).addScaledVector(fwd, g.k * 0.44);
-    g.holder.rotation.y = S.figRot;
-    g.actions.walk.time = (main.actions.walk.time + g.k * 0.3) % dur;
-    g.mixer.update(0);
+    if (trialMode) {
+      const sd = g.k === 1 ? -1 : 1;
+      g.holder.position.set(S.figX + sd * 1.2, 0, S.figZ - 0.35);
+      g.holder.rotation.y = S.figRot - sd * 0.22;
+      g.actions.walk.setEffectiveWeight(0);
+      g.actions.idle.setEffectiveWeight(1);
+      g.mixer.update(dt);
+    } else {
+      g.holder.position.set(S.figX, 0, S.figZ).addScaledVector(fwd, g.k * 0.44);
+      g.holder.rotation.y = S.figRot;
+      g.actions.idle.setEffectiveWeight(0);
+      g.actions.walk.setEffectiveWeight(1);
+      g.actions.walk.time = (main.actions.walk.time + g.k * 0.3) % dur;
+      g.mixer.update(0);
+    }
     figure.commit(g);
   });
 
@@ -376,6 +417,7 @@ function loop(now) {
   floor.visible = S.floor > 0.002;
 
   territory.update(S, camera.position, camTgt);
+  clinic.update(S, camera.position);
 
   renderer.render(scene, camera);
   labels.update(S, camera, dt, { pick, mouse, pointerSeen, now: t, pointTarget });

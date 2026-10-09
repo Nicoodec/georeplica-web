@@ -20,6 +20,10 @@ export const DEFAULTS = {
   lblBody: 0, lblGhost: 0, lblScan: 0, lblCursor: 0,
   lblCity: 0, lblInd: 0, lblRural: 0, lblFire: 0, lblRiver: 0, lblFig: 0,
   shade: 0, shadeRight: 0, mHero: 0,
+  // salud
+  interior: 0, skin: 1, fHeart: 0, fBrain: 0, fLesion: 0, nerves: 0, lesion: 1, vessels: 1,
+  trial: 0, ecg: 0, hrReact: 0, clinic: 0, build: 0, explode: 0, flows: 0,
+  lblOrgans: 0, lblHeart: 0, lblBrain: 0, lblTrial: 0, lblClinic: 0,
 };
 
 // Vista aérea común a todo el territorio
@@ -53,6 +57,44 @@ export const KEYS = {
     figX: 0.88, figRot: -0.22,
     camX: 0.42, camY: 1.18, camZ: 4.5, tgtX: 0.6, tgtY: 1.06,
     look: 'cursor', lookW: 1, point: 'cursor', pointW: 1, lblCursor: 1, pulse: 0.25,
+  }),
+
+  // ---- salud: la misma figura, por dentro
+  salud: (p) => ({
+    figX: 0.95, figRot: -0.3,
+    camX: lerp(0.4, 0.55, ease(p)), camY: 1.24, camZ: lerp(4.5, 3.4, ease(p)), tgtX: 0.6, tgtY: lerp(1.06, 1.2, ease(p)),
+    interior: ease(p * 1.7), skin: lerp(1, 0.32, ease(p * 1.7)), spark: 0.4,
+    look: 'cam', lookW: 0.35, lblOrgans: ease((p - 0.3) * 2.5), parallax: 0.5,
+  }),
+
+  corazon: (p) => ({
+    figX: 0.78, figRot: -0.22,
+    camX: lerp(0.5, 0.42, p), camY: 1.37, camZ: lerp(1.75, 1.5, p), tgtX: 0.58, tgtY: 1.3,
+    interior: 1, skin: 0.1, fHeart: 1, ecg: 1, lblHeart: 1, hrReact: 1, spark: 0,
+    look: 'cam', lookW: 0.15, parallax: 0.3,
+  }),
+
+  cerebro: (p) => ({
+    figX: 0.78, figRot: -0.22,
+    camX: lerp(0.5, 0.45, ease(p)), camY: lerp(1.68, 1.25, ease(p)), camZ: lerp(1.25, 3.9, ease(p)),
+    tgtX: 0.62, tgtY: lerp(1.64, 1.02, ease(p)),
+    interior: 1, skin: 0.1, fBrain: 1, nerves: 1, vessels: 0.25, lblBrain: 1 - ease((p - 0.55) * 4), spark: 0,
+    lookW: 0, parallax: 0.3,
+  }),
+
+  ensayo: (p) => ({
+    figX: 1.35, figRot: -0.12,
+    camX: 1.35, camY: 1.2, camZ: 6.3, tgtX: 1.25, tgtY: 1.0, shift: 0.19,
+    trial: 1, interior: 1, skin: 0.4, fLesion: 1, vessels: 0.45, lesion: lerp(1, 0.22, ease(p * 1.25)),
+    lblTrial: 1, lookW: 0, spark: 0.3,
+  }),
+
+  clinica: (p) => ({
+    figX: 0, figZ: lerp(3.2, -0.4, p), figRot: Math.PI, walk: 1,
+    camX: lerp(24, 46, ease(p)), camY: lerp(10, 38, ease(p)), camZ: lerp(26, 62, ease(p)),
+    tgtX: 2, tgtY: lerp(3, 19, ease(p)), tgtZ: -12, shift: 0.18,
+    clinic: 1, build: ease(p * 2.4), explode: ease((p - 0.42) * 2.2), flows: ease((p - 0.3) * 2),
+    lblClinic: ease((p - 0.55) * 3), floor: 0.4, lookW: 0, parallax: 0, shade: 0.6, glyphSize: 0.042,
   }),
 
   territorio: (p) => ({
@@ -120,5 +162,13 @@ export function mobileAdjust(s) {
   } else {
     s.tgtY -= 6;
     s.camZ *= 1.15;
+  }
+  // escenas anchas (clínica, tres gemelos): en vertical hay que alejarse más
+  const m = 1 + 0.95 * s.clinic + 1.2 * s.trial;
+  if (m > 1.001) {
+    s.camX = s.tgtX + (s.camX - s.tgtX) * m;
+    s.camY = s.tgtY + (s.camY - s.tgtY) * m;
+    s.camZ = s.tgtZ + (s.camZ - s.tgtZ) * m;
+    s.tgtY -= 9 * s.clinic + 0.35 * s.trial;
   }
 }

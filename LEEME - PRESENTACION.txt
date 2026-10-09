@@ -17,3 +17,7 @@ Consejos para la presentación
 - Recorre la página con la rueda del ratón, despacio: cada sección es un "plano".
 - En la sección 04 mueve el ratón: la figura te señala. En la última, pasa el ratón
   por el correo: la figura asiente.
+- Salud (sección 05): la figura se vuelve una radiografía de dígitos. En 05.1, haz
+  scroll rápido con la rueda: el corazón se acelera y el electro lo dibuja en vivo.
+- 05.3: el nódulo naranja encoge a medida que bajas (tratamiento elegido).
+- 05.4: la figura entra en la clínica y el edificio se despliega planta a planta.
