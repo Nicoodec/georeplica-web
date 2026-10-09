@@ -18,7 +18,8 @@ const VERT = /* glsl */ `
   uniform mat4 bindMatrix;
   uniform mat4 bindMatrixInverse;
   uniform float uTime, uSize, uProj, uOpacity, uAssemble, uScanY, uScanOn, uPulse, uGlitch,
-                uFlick, uTintMix, uPart, uFloorY, uSpark, uHeight, uSkin;
+                uFlick, uTintMix, uPart, uFloorY, uSpark, uHeight, uSkin, uTearGlitch;
+  uniform vec3 uTear;
   attribute vec4 skinIndex;
   attribute vec4 skinWeight;
   attribute vec4 aRand; // semilla, ritmo, capa (0 glifo legible / 1 polvo), libre
@@ -73,11 +74,19 @@ const VERT = /* glsl */ `
     wp.xz = origin.xz + rel;
     wp.xyz += scatter * ia * ia;
 
+    // --- el doble que intenta salirse: los pies se quedan, el torso tira hacia fuera,
+    // y cada dígito se queda a una distancia distinta (deja una estela entre los dos)
+    float hm = smoothstep(0.04, 0.9, h01);
+    float lag = pow(hash11(seed * 71.0), 0.55);
+    wp.xyz += uTear * hm * (0.3 + 0.7 * lag);
+
     // --- fallo de señal: franjas horizontales que se desplazan un instante
     float tq = floor(uTime * 24.0);
     float slice = floor(wp.y * 26.0);
-    float gsel = step(0.84, hash21(vec2(slice, tq))) * uGlitch;
+    float gAmt = uGlitch + uTearGlitch;
+    float gsel = step(0.84 - uTearGlitch * 0.2, hash21(vec2(slice, tq))) * gAmt;
     wp.x += (hash21(vec2(slice + 7.3, tq)) - 0.5) * 0.16 * gsel;
+    wp.z += (hash21(vec2(slice + 3.1, tq)) - 0.5) * 0.1 * gsel * uTearGlitch;
 
     vec4 mv = viewMatrix * wp;
     gl_Position = projectionMatrix * mv;
@@ -403,6 +412,8 @@ export class Figure {
           uTintMix: { value: tint },
           uPart: { value: o.name.includes('Joints') ? 1 : 0 },
           uSkin: main ? this.shared.uSkin : { value: 1 },
+          uTear: { value: new THREE.Vector3() },
+          uTearGlitch: { value: 0 },
         },
       });
       const geo = this.geos[o.name];
@@ -579,6 +590,24 @@ export class Figure {
     inst.bones.RightArm.getWorldPosition(_v);
     inst.bones.LeftArm.getWorldPosition(_v2);
     return _v.distanceToSquared(target) < _v2.distanceToSquared(target) ? 'Right' : 'Left';
+  }
+
+  // copia la pose exacta de una instancia en otra (el doble imita cada gesto)
+  copyPose(from, to) {
+    const a = from.points[0].mesh.skeleton.bones, b = to.points[0].mesh.skeleton.bones;
+    for (let i = 0; i < a.length; i++) { b[i].quaternion.copy(a[i].quaternion); b[i].position.copy(a[i].position); }
+    to.holder.position.copy(from.holder.position);
+    to.holder.rotation.copy(from.holder.rotation);
+  }
+
+  setTear(inst, offset, glitch, tint) {
+    for (const { pts } of inst.points) {
+      const u = pts.material.uniforms;
+      if (!u.uTear) continue;
+      u.uTear.value.copy(offset);
+      u.uTearGlitch.value = glitch;
+      if (tint !== undefined) u.uTintMix.value = tint;
+    }
   }
 
   // tras modificar huesos: sube el esqueleto a la GPU y sincroniza los puntos

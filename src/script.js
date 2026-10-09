@@ -19,7 +19,7 @@ export const DEFAULTS = {
   spark: 1, glyphSize: 0.036,
   lblBody: 0, lblGhost: 0, lblScan: 0, lblCursor: 0,
   lblCity: 0, lblInd: 0, lblRural: 0, lblFire: 0, lblRiver: 0, lblFig: 0,
-  shade: 0, shadeRight: 0, mHero: 0,
+  shade: 0, shadeRight: 0, mHero: 0, tear: 0,
   // salud
   interior: 0, skin: 1, fHeart: 0, fBrain: 0, fLesion: 0, nerves: 0, lesion: 1, vessels: 1,
   trial: 0, ecg: 0, resp: 0, hrReact: 0, clinic: 0, build: 0, explode: 0, flows: 0,
@@ -31,7 +31,7 @@ export const DEFAULTS = {
 const terrainBase = { floor: 0, terrain: 1, reveal: 1, parallax: 0, lookW: 0, shade: 1, glyphSize: 0.04 };
 
 export const KEYS = {
-  inicio: () => ({ look: 'cursor', mHero: 1 }),
+  inicio: () => ({ look: 'cursor', mHero: 1, tear: 1 }),
 
   forma: (p) => ({
     figX: 1.15, figRot: -0.42,

@@ -254,6 +254,7 @@ async function start() {
 
   if (import.meta.env.DEV) window.go = (id, p) => { lenis.resize(); const L = layout.find((l) => l.el.id === id); lenis.scrollTo(L.top + Math.max(L.h - innerHeight, 0) * p, { immediate: true }); };
   if (import.meta.env.DEV) window.__dbg = { lenis, layout: () => layout, clinic, vitals, figure, main, ghosts, camera, state, target, territory, scene, renderer, shared };
+  if (import.meta.env.DEV) window.__tear = () => { tear.next = 0; };
   if (import.meta.env.DEV) window.__replay = () => { assembleT0 = performance.now(); };
   if (import.meta.env.DEV) {
     const q = new URLSearchParams(location.search);
@@ -273,6 +274,8 @@ const camTgt = new THREE.Vector3();
 const camPos = new THREE.Vector3();
 let wR = 0, wL = 0, side = 'Right';
 let nodW = 0, nodUntil = 0;
+const tear = { next: 4, start: -10, dur: 1, amp: 1, side: 1, snapped: true };
+const _zero = new THREE.Vector3();
 // constantes del gemelo: el corazón late de verdad a este ritmo y el electro lo dibuja
 const vitals = { bpm: 66, phase: 0, beat: 0, breath: 0, breathPh: 0, rpm: 14 };
 const beatShape = (ph) => Math.exp(-(((ph - 0.26) / 0.045) ** 2)) + 0.45 * Math.exp(-(((ph - 0.44) / 0.06) ** 2));
@@ -407,12 +410,53 @@ function loop(now) {
   figure.point(main, pointTarget, wL, 'Left');
   figure.commit(main);
 
+  // ---- portada: un doble intenta arrancarse de la figura y no lo consigue
+  const tearOn = !reduced && S.tear > 0.01 && S.ghosts < 0.01 && S.trial < 0.01 && shared.uAssemble.value > 0.98;
+  if (tearOn) {
+    if (t > tear.next) {
+      // nuevo intento: hacia dónde, cuánto y cuánto dura
+      tear.start = t;
+      tear.dur = 1.1 + Math.random() * 0.8;
+      tear.amp = 0.55 + Math.random() * 0.45;
+      tear.side = Math.random() < 0.5 ? -1 : 1;
+      tear.next = t + tear.dur + 2.2 + Math.random() * 3.2;
+      tear.snapped = false;
+    }
+    const u = (t - tear.start) / tear.dur;
+    let e = 0;
+    if (u >= 0 && u < 1) {
+      // sale despacio, forcejea… y vuelve de golpe
+      e = u < 0.78 ? 1 - Math.pow(1 - u / 0.78, 2.4) : Math.max(0, 1 - (u - 0.78) / 0.06);
+      e *= 1 + Math.sin(t * 46) * 0.06 + Math.sin(t * 13) * 0.08;
+      if (u > 0.78 && !tear.snapped) { tear.snapped = true; glitchUntil = t + 0.16; }
+    }
+    if (import.meta.env.DEV && window.__tearHold != null) e = window.__tearHold;
+    e *= tear.amp * S.tear;
+    // temblor de fondo: siempre está empujando un poco
+    const idle = (Math.sin(t * 3.1) * 0.5 + 0.5) * 0.03 + (Math.random() < 0.04 ? 0.05 : 0);
+    const fwdW = new THREE.Vector3(Math.sin(S.figRot), 0, Math.cos(S.figRot));
+    const sideW = new THREE.Vector3(Math.cos(S.figRot), 0, -Math.sin(S.figRot));
+    [ghosts[2], ghosts[3]].forEach((g, i) => {
+      const k = i === 0 ? 1 : 0.62; // el blanco va un poco por detrás del azul
+      const off = new THREE.Vector3()
+        .addScaledVector(fwdW, (0.16 * e + idle) * k)
+        .addScaledVector(sideW, tear.side * (0.42 * e + idle * 0.5) * k * (i === 0 ? 1 : -0.45))
+        .add(new THREE.Vector3(0, 0.07 * e * k, 0));
+      figure.copyPose(main, g);
+      figure.setTear(g, off, 0.25 + e * 0.9, i === 0 ? 0.9 : 0.15);
+      figure.setOpacity(g, (0.1 + e * 0.75 + idle * 2) * (i === 0 ? 1 : 0.6) * S.tear);
+      figure.commit(g);
+    });
+  }
+
   // fantasmas del futuro
   const fwd = new THREE.Vector3(Math.sin(S.figRot), 0, Math.cos(S.figRot));
   const dur = main.actions.walk.getClip().duration;
   // ...o, en la sección del tratamiento, las alternativas que no se eligen
   const trialMode = S.trial > S.ghosts;
   ghosts.forEach((g) => {
+    if (tearOn && g.k >= 3) return; // ocupados haciendo de doble
+    if (g.k >= 3) figure.setTear(g, _zero, 0, 0.88);
     const op = trialMode ? (g.k <= 2 ? S.trial * 0.62 : 0) : S.ghosts * (0.78 - (g.k - 1) * 0.17);
     figure.setOpacity(g, op);
     if (!g.visible) return;
