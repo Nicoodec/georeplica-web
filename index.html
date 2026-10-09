@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GeoReplica Technologies — Internet of Twins</title>
+  <meta name="description" content="Gemelos digitales conectados en tiempo real a personas, ciudades, industrias y territorios." />
+  <meta name="theme-color" content="#060708" />
+  <link rel="icon" href="./mark.svg" type="image/svg+xml" />
+  <link rel="preload" href="./models/Xbot.glb" as="fetch" crossorigin />
+</head>
+<body>
+  <!-- Carga: el arco del logo se dibuja con el progreso real de descarga -->
+  <div class="boot" id="boot" aria-hidden="true">
+    <svg class="boot__mark" viewBox="0 0 540 480">
+      <path class="boot__arc-bg" d="M 31 306 A 240 240 0 1 1 496 222" />
+      <path class="boot__arc" id="bootArc" d="M 31 306 A 240 240 0 1 1 496 222" pathLength="1" />
+      <circle class="boot__eye" cx="345" cy="288" r="27" />
+      <path class="boot__jaw" d="M 488 272 L 499 438 Q 500 455 483 455 L 405 455" />
+    </svg>
+    <div class="boot__meta">
+      <span id="bootBits">00000000</span>
+      <span id="bootPct">000 %</span>
+    </div>
+    <p class="boot__line">Cargando réplica</p>
+  </div>
+
+  <canvas class="gl" id="gl" aria-hidden="true"></canvas>
+  <canvas class="hud" id="hud" aria-hidden="true"></canvas>
+  <div class="labels" id="labels" aria-hidden="true"></div>
+  <div class="shade" id="shade" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="top">
+    <a class="brand" href="#inicio" data-goto="inicio" aria-label="GeoReplica, inicio">
+      <svg class="brand__mark" viewBox="0 0 540 480" aria-hidden="true">
+        <path d="M 31 306 A 240 240 0 1 1 496 222" />
+        <circle cx="345" cy="288" r="27" />
+        <path d="M 488 272 L 499 438 Q 500 455 483 455 L 405 455" />
+      </svg>
+      <span class="brand__name">geo<b>Replica</b></span>
+    </a>
+    <div class="top__readout mono" aria-hidden="true">
+      <span id="coord">42.3439° N&nbsp;&nbsp;3.6969° O</span>
+      <span class="sep">/</span>
+      <span id="clock">00:00:00.00 UTC</span>
+    </div>
+    <nav class="top__nav mono" aria-label="Secciones">
+      <a href="#forma" data-goto="forma">Gemelo</a>
+      <a href="#territorio" data-goto="territorio">Territorio</a>
+      <a href="#plataforma" data-goto="plataforma">Plataforma</a>
+      <a href="#contacto" data-goto="contacto" class="top__cta">Contacto</a>
+    </nav>
+  </header>
+
+  <!-- Regla lateral: dónde estás en el recorrido -->
+  <aside class="rail mono" aria-hidden="true">
+    <div class="rail__ticks" id="railTicks"></div>
+    <div class="rail__now"><span id="railIdx">00</span><i></i><span id="railName">Inicio</span></div>
+  </aside>
+  <aside class="depth mono" aria-hidden="true">
+    <span>Z</span><b id="depthVal">5.20</b><span>m</span>
+  </aside>
+
+  <main id="main">
+
+    <!-- 00 -->
+    <section class="scene scene--hero" id="inicio" data-name="Inicio">
+      <div class="panel">
+        <div class="hero__word" aria-hidden="true"><span>GEO</span><span>REPLICA</span></div>
+        <div class="hero__tag mono" data-scramble>Sujeto 001 &mdash; réplica activa &mdash; <span id="ptsCount">0</span> puntos</div>
+        <h1 class="hero__title" data-split>Todo lo que existe puede tener un gemelo.</h1>
+        <div class="hero__aside">
+          <p>Gemelos digitales conectados en tiempo real a ciudades, industrias y territorios. Una copia exacta del mundo físico que no solo lo muestra: lo entiende, lo anticipa y lo mejora.</p>
+          <div class="hero__scroll mono"><i></i><span>Desplázate. Él te lo enseña.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 01 -->
+    <section class="scene" id="forma" data-name="Captura">
+      <div class="panel panel--left">
+        <div class="kicker mono" data-scramble><b>01</b> Captura</div>
+        <h2 data-split>Primero, la forma.</h2>
+        <p>Todo objeto físico deja un rastro medible: geometría, posición, materiales, temperatura. Lo capturamos con LiDAR, fotogrametría, sensores y cartografía GIS, y lo reconstruimos punto a punto en el mismo sistema de coordenadas que el original.</p>
+        <dl class="spec mono">
+          <div><dt>Fuentes</dt><dd>LiDAR · GIS · IoT · satélite</dd></div>
+          <div><dt>Referencia</dt><dd>ETRS89 / UTM 30N</dd></div>
+          <div><dt>Esta figura</dt><dd><span data-pts>0</span> puntos, recalculados en cada fotograma</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="scene" id="pulso" data-name="Tiempo real">
+      <div class="panel panel--right">
+        <div class="kicker mono" data-scramble><b>02</b> Tiempo real</div>
+        <h2 data-split>Después, el pulso.</h2>
+        <p>Un gemelo sin datos en vivo es solo una maqueta. El nuestro está conectado de forma continua al activo físico: cuando el original se mueve, se calienta o falla, la réplica lo sabe en el mismo instante.</p>
+        <p class="note mono">Las cifras que flotan sobre la figura no son decorado. Se calculan en cada fotograma a partir de su esqueleto.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="scene scene--long" id="futuro" data-name="Simulación">
+      <div class="panel panel--right panel--low">
+        <div class="kicker mono" data-scramble><b>03</b> Simulación</div>
+        <h2 data-split>Luego, lo que aún no ha pasado.</h2>
+        <p>Con el estado real del activo ensayamos escenarios antes de que ocurran: cómo responderá una red eléctrica a una ola de calor, cuándo fallará una máquina, por dónde avanzará un incendio. Predicción y prescripción, no solo visualización.</p>
+        <p class="note mono">Como la cronofotografía de Marey en 1882, pero hacia delante: cada silueta azul es un instante que todavía no ha ocurrido.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="scene" id="respuesta" data-name="Respuesta">
+      <div class="panel panel--left">
+        <div class="kicker mono" data-scramble><b>04</b> Retroalimentación bidireccional</div>
+        <h2 data-split>Y al final, la respuesta.</h2>
+        <p>La réplica no se limita a observar. Decide, y devuelve la decisión al mundo físico: ajusta un semáforo, regula una válvula, reprograma un turno. El circuito entre lo real y lo digital se cierra.</p>
+        <p class="cue mono"><span class="cue__dot"></span><span class="cue--fine">Mueve el cursor. Te está siguiendo.</span><span class="cue--touch">Toca la pantalla. Te está siguiendo.</span></p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="scene" id="territorio" data-name="Escala">
+      <div class="panel panel--left">
+        <div class="kicker mono" data-scramble><b>05</b> Escala</div>
+        <h2 data-split>De un cuerpo a un territorio.</h2>
+        <p>La misma lógica que replica a una persona replica una ciudad entera. Relieve, vegetación, edificios, tráfico y sensores conviven en un único sistema de coordenadas, y se actualizan a la vez.</p>
+      </div>
+    </section>
+
+    <section class="scene scene--sector" id="ciudades" data-name="Ciudades">
+      <div class="panel panel--left panel--card">
+        <div class="kicker mono" data-scramble><b>05.1</b> Ciudades inteligentes</div>
+        <h3>Una ciudad que se ensaya antes de construirse.</h3>
+        <p>Simulamos el comportamiento de la ciudad para optimizar el tráfico, la distribución de energía y los servicios públicos.</p>
+        <p class="layers mono">Capas &nbsp;edificación · viario · movilidad · energía</p>
+      </div>
+    </section>
+
+    <section class="scene scene--sector" id="industria" data-name="Industria 4.0">
+      <div class="panel panel--left panel--card">
+        <div class="kicker mono" data-scramble><b>05.2</b> Industria 4.0</div>
+        <h3>La avería, vista antes de que suceda.</h3>
+        <p>Réplicas virtuales de plantas de producción para monitorizar procesos, predecir fallos de maquinaria y afinar la cadena de suministro.</p>
+        <p class="layers mono">Capas &nbsp;procesos · maquinaria · logística</p>
+      </div>
+    </section>
+
+    <section class="scene scene--sector" id="rural" data-name="Territorio rural">
+      <div class="panel panel--left panel--card">
+        <div class="kicker mono" data-scramble><b>05.3</b> Territorio rural</div>
+        <h3>El territorio que más datos necesita es el que menos tiene.</h3>
+        <p>Cultivos, cauces, masa forestal y caminos, vigilados desde el mismo modelo con una red de sensores ambientales de bajo coste.</p>
+        <p class="layers mono">Capas &nbsp;relieve · hidrografía · parcelas · sensores</p>
+      </div>
+    </section>
+
+    <section class="scene scene--sector scene--long" id="incendios" data-name="Emergencias">
+      <div class="panel panel--left panel--card">
+        <div class="kicker mono kicker--heat" data-scramble><b>05.4</b> Emergencias</div>
+        <h3>Hacia dónde irá el fuego, y por dónde salir.</h3>
+        <p>Con un incendio activo, el gemelo cruza viento, pendiente y combustible para estimar el avance del frente hora a hora, y recalcula las rutas de evacuación cada vez que cambia.</p>
+        <p class="layers mono">Simulación &nbsp;<span id="fireClock">T+00:00</span></p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="scene" id="red" data-name="Internet of Twins">
+      <div class="panel panel--right">
+        <div class="kicker mono" data-scramble><b>06</b> Internet of Twins</div>
+        <h2 data-split>Un gemelo es útil. Mil, conectados, son un sistema.</h2>
+        <p>Cada réplica comparte datos con las demás: la planta con la red eléctrica, la red con la ciudad, la ciudad con el territorio que la rodea. Una decisión en un punto se propaga, medida, a todo lo demás.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="scene scene--platform" id="plataforma" data-name="Plataforma">
+      <div class="panel panel--left panel--wide">
+        <div class="kicker mono" data-scramble><b>07</b> Plataforma</div>
+        <h2 data-split>Gemelos digitales como servicio. Para cualquiera.</h2>
+        <ol class="steps">
+          <li style="--i:0"><span class="mono">01</span><h4>Capturar</h4><p>Partimos de lo que ya existe: planos, sensores, cartografía, históricos de operación.</p></li>
+          <li style="--i:1"><span class="mono">02</span><h4>Replicar</h4><p>Construimos el gemelo y lo conectamos a los datos del activo en tiempo real.</p></li>
+          <li style="--i:2"><span class="mono">03</span><h4>Simular</h4><p>Ensayamos escenarios con optimización matemática y procesos estocásticos.</p></li>
+          <li style="--i:3"><span class="mono">04</span><h4>Operar</h4><p>El gemelo actúa: alertas, recomendaciones y control sobre el activo físico.</p></li>
+        </ol>
+        <p class="creds mono">Más de cinco años desarrollando gemelos digitales · Experiencia en telco, movilidad, construcción, energía y software · Operaciones, ciberseguridad, UI/UX y datos geoespaciales</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="scene scene--contact" id="contacto" data-name="Contacto">
+      <div class="panel panel--left">
+        <div class="kicker mono" data-scramble><b>08</b> Contacto</div>
+        <h2 class="contact__q" data-split>¿Qué quieres replicar?</h2>
+        <a class="contact__mail" id="mail" href="mailto:info@georeplica.com">info@georeplica.com</a>
+        <p class="contact__sub">Cuéntanos qué activo, ciudad o territorio tienes en mente. Te respondemos con una primera idea de su gemelo.</p>
+      </div>
+      <footer class="foot mono">
+        <span>GeoReplica Technologies</span>
+        <span>Internet of Twins</span>
+        <span>42.3439° N 3.6969° O</span>
+        <span>© 2026</span>
+      </footer>
+    </section>
+  </main>
+
+  <noscript><p class="noscript">Esta página dibuja su figura con WebGL y necesita JavaScript.</p></noscript>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

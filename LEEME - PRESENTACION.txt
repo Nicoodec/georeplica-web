@@ -1,0 +1,19 @@
+GEOREPLICA - CÓMO ABRIR LA PÁGINA
+=================================
+
+1. Doble clic en  "ABRIR PAGINA.bat"
+   -> Se abre una ventana negra y, solo, el navegador con la página.
+   -> NO cierres la ventana negra mientras presentas (puedes minimizarla).
+
+2. Para terminar: cierra la ventana negra.
+   Si algo se quedara colgado: doble clic en "PARAR PAGINA.bat" (libera el puerto).
+
+No necesita internet: el modelo 3D, las fuentes y todo el código están en la carpeta dist/.
+Si el puerto 5190 está ocupado por otra cosa, usa solo el 5191, 5192...
+
+Consejos para la presentación
+- Pulsa F11 en el navegador para pantalla completa.
+- Chrome o Edge, con el portátil enchufado a la corriente (la figura va más fluida).
+- Recorre la página con la rueda del ratón, despacio: cada sección es un "plano".
+- En la sección 04 mueve el ratón: la figura te señala. En la última, pasa el ratón
+  por el correo: la figura asiente.
