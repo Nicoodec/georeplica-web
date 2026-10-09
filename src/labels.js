@@ -36,9 +36,8 @@ export class Labels {
     this.items.push({ ...def, el, html: '', lastText: -1 });
   }
 
-  build({ figure, main, ghosts, territory, clinic, ZONES, terrainH, riverX, vitals }) {
+  build({ figure, main, ghosts, territory, clinic, rings, ZONES, terrainH, riverX, vitals }) {
     this.vitals = vitals;
-    this.ecg = [];
     const B = main.bones;
     const wp = (bone, out = new THREE.Vector3()) => bone.getWorldPosition(out);
     let prevHand = null;
@@ -196,10 +195,11 @@ export class Labels {
       key: 'lblTrial', side: 1, dx: 50, dy: 40, anchor: org('lesion'), cls: 'lbl--heat',
       text: (dt, S) => `Nódulo <b>${num(16 * S.lesion, 1)} mm</b><small>${S.lesion < 0.5 ? 'remite con el tratamiento B' : 'evolución simulada'}</small>`,
     });
+    const mm = (v) => num(16 * v, 1);
     const trialTag = [
-      { k: 0, html: 'Tratamiento B <b>83 %</b><small>respuesta prevista · elegido</small>' },
-      { k: 1, html: 'Tratamiento A <b>41 %</b><small>respuesta prevista</small>' },
-      { k: 2, html: 'Tratamiento C <b>62 %</b><small>respuesta prevista</small>' },
+      { k: 0, html: (S) => `Tratamiento B <b>83 %</b><small>nódulo ${mm(S.lesion)} mm · el elegido</small>` },
+      { k: 1, html: (S) => `Tratamiento A <b>41 %</b><small>nódulo ${mm(S.lesionA)} mm</small>` },
+      { k: 2, html: (S) => `Tratamiento C <b>62 %</b><small>nódulo ${mm(S.lesionC)} mm</small>` },
     ];
     for (const tg of trialTag) {
       const inst = tg.k === 0 ? main : ghosts[tg.k - 1];
@@ -207,33 +207,65 @@ export class Labels {
         key: 'lblTrial', side: 0, dy: -30, cls: 'lbl--lc',
         weight: tg.k === 0 ? undefined : () => inst.opacity / 0.62,
         anchor: (o) => { inst.bones.HeadTop_End.getWorldPosition(o); o.y += 0.1; return o; },
-        text: () => tg.html,
+        text: (dt, S) => tg.html(S),
       });
     }
+    this.add({
+      key: 'lblTrial', side: 1, dx: 30, dy: 26, cls: 'lbl--lc',
+      anchor: (o) => { main.bones.RightFoot.getWorldPosition(o); o.y = 0.02; return o; },
+      text: (dt, S) => `Día <b>${Math.round(S.trialT * 90)}</b> de 90<small>evolución simulada en cada gemelo</small>`,
+    });
 
-    // --- la clínica
+    // --- reloj, monitor de constantes y paciente
+    this.add({
+      key: 'lblWatch', side: 1, dx: 60, dy: -46, anchor: org('watch'),
+      text: () => `Reloj del paciente <b>${Math.round(vitals.bpm)} lpm</b><small>sincronizado con su gemelo</small>`,
+    });
+    this.add({
+      key: 'lblVitals', side: 1, dx: 120, dy: -40,
+      anchor: (o) => rings.pen(o),
+      text: () => {
+        const hrv = Math.round(52 - (vitals.bpm - 66) * 0.5);
+        return `Frecuencia <b>${Math.round(vitals.bpm)} lpm</b><small>VFC ${hrv} ms · SpO₂ 98 % · resp. ${Math.round(vitals.rpm)} rpm</small><small>presión 118/76 · datos simulados</small>`;
+      },
+    });
+    this.add({
+      key: 'lblPatient', side: 1, dx: 60, dy: -70,
+      anchor: (o) => main.bones.HeadTop_End.getWorldPosition(o),
+      text: () => `Paciente 001 · hab. 604 <b>estable</b><small>alta prevista mañana a las 10:00</small><small>después, seguimiento en casa con su gemelo</small>`,
+    });
+
+    // --- la clínica: todo lo que dicen sale de la propia simulación
     this.add({
       key: 'lblClinic', side: -1, dx: 40, dy: -60,
       anchor: (o) => clinic.at(clinic.orPos[1], 1, o),
-      text: () => `Quirófano 2 <b>en uso</b><small>libre en 18 min · previsión</small>`,
+      text: (dt, S, x) => {
+        const left = 18 - Math.floor((x.t / 3) % 18);
+        return `Quirófano 2 <b>en uso</b><small>libre en ${left} min · el 4 se está preparando</small>`;
+      },
     });
     this.add({
       key: 'lblClinic', side: 1, dx: 50, dy: -50,
       anchor: (o) => clinic.at(clinic.roomPos, 6, o),
-      text: () => {
-        const b = clinic.beds;
-        return `Hospitalización <b>${Math.round((b.busy / b.total) * 100)} %</b><small>${b.total} camas · ${b.total - b.busy} libres</small>`;
+      text: (dt, S, x) => {
+        const c = clinic.census(x.t);
+        return `Hospitalización <b>${Math.round((c.busy / c.total) * 100)} %</b><small>${c.total} camas · ${c.dis} altas en curso · ${c.cln} en limpieza</small>`;
       },
     });
     this.add({
       key: 'lblClinic', side: -1, dx: 46, dy: 40,
       anchor: (o) => clinic.at(clinic.erPos, 0, o),
-      text: () => `Urgencias <b>espera 12 min</b><small>pico previsto a las 19:00</small>`,
+      text: (dt, S, x) => `Urgencias <b>espera ${11 + Math.round(Math.sin(x.t * 0.13) * 2 + 2)} min</b><small>pico previsto a las 19:00</small>`,
+    });
+    this.add({
+      key: 'lblClinic', side: -1, dx: 40, dy: -44,
+      anchor: (o) => o.copy(clinic.ambPos || clinic.erPos),
+      text: () => clinic.amb.parked ? `Ambulancia 2 <b>en urgencias</b><small>paciente en triaje</small>` : `Ambulancia 2 <b>llega en ${clinic.amb.eta} s</b><small>box 3 preparado</small>`,
     });
     this.add({
       key: 'lblClinic', side: 1, dx: 40, dy: -40,
       anchor: (o) => clinic.at(clinic.heliPos, 8, o),
-      text: () => `Helipuerto<small>traslado en curso · 6 min</small>`,
+      text: () => `Helipuerto<small>sin operaciones previstas</small>`,
     });
 
     // --- cursor (sección 04)
@@ -250,40 +282,6 @@ export class Labels {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     const tick = extra.now;
-
-    // electrocardiograma: se dibuja con el mismo latido que mueve el corazón
-    if (this.vitals) {
-      const ph = this.vitals.phase % 1;
-      const g = (x, m, w) => Math.exp(-(((x - m) / w) ** 2));
-      const v = 0.1 * g(ph, 0.13, 0.025) - 0.12 * g(ph, 0.235, 0.008) + g(ph, 0.255, 0.009) - 0.28 * g(ph, 0.275, 0.01) + 0.28 * g(ph, 0.47, 0.04);
-      this.ecg.push([tick, v]);
-      while (this.ecg.length && tick - this.ecg[0][0] > 2.8) this.ecg.shift();
-    }
-    if (S.ecg > 0.01 && this.heartAnchor) {
-      const hp = this.heartAnchor(_a).project(camera);
-      const hx = (hp.x + 1) * 0.5 * w, hy = (1 - hp.y) * 0.5 * h;
-      const bw = Math.min(300, w * 0.26), bh = 70;
-      const x0 = Math.min(hx + 60, w - bw - 24), y0 = Math.min(hy + 50, h - bh - 60);
-      ctx.globalAlpha = S.ecg * 0.35;
-      ctx.strokeStyle = 'rgba(233,231,226,0.5)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= 10; i++) { const xx = x0 + (bw * i) / 10; ctx.beginPath(); ctx.moveTo(xx, y0); ctx.lineTo(xx, y0 + bh); ctx.stroke(); }
-      for (let i = 0; i <= 4; i++) { const yy = y0 + (bh * i) / 4; ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x0 + bw, yy); ctx.stroke(); }
-      ctx.globalAlpha = S.ecg;
-      ctx.strokeStyle = '#3b93ec';
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      this.ecg.forEach(([tt, vv], i) => {
-        const xx = x0 + bw - ((tick - tt) / 2.8) * bw;
-        const yy = y0 + bh * 0.68 - vv * bh * 0.6;
-        if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
-      });
-      ctx.stroke();
-      const lastV = this.ecg.length ? this.ecg[this.ecg.length - 1][1] : 0;
-      ctx.fillStyle = '#9fcbff';
-      ctx.beginPath(); ctx.arc(x0 + bw, y0 + bh * 0.68 - lastV * bh * 0.6, 2.5, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
-    }
 
     // línea de escaneo a lo ancho de la figura
     if (S.lblScan > 0.01 && S.scanOn > 0.05) {
@@ -326,7 +324,7 @@ export class Labels {
       // texto: los valores se refrescan a 12 Hz para que se puedan leer
       const due = tick - it.lastText > 0.083 || !it.html;
       if (it.live || due) {
-        const html = it.text(dt, S, { target: extra.pointTarget || _c.set(0, 0, 0) });
+        const html = it.text(dt, S, { target: extra.pointTarget || _c.set(0, 0, 0), t: extra.now });
         if (due) {
           if (html !== it.html) { it.el.innerHTML = html; it.html = html; }
           it.lastText = tick;

@@ -5,6 +5,7 @@ import { makeGlyphAtlas } from './glyphs.js';
 import { Figure, makeFloor } from './figure.js';
 import { Territory, ZONES, terrainH, riverX } from './territory.js';
 import { Clinic } from './clinic.js';
+import { VitalRings } from './vitals.js';
 import { KEYS, DEFAULTS, mobileAdjust } from './script.js';
 import { Labels } from './labels.js';
 import { initText, scramble } from './text.js';
@@ -115,6 +116,10 @@ function computeTarget(y) {
     target[key] = lerp(a, b, e);
   }
   const dom = B && e > 0.5 ? B : A;
+  // entre la cama y el suelo no se interpola: la figura salta (y se rematerializa)
+  if (B && (Math.abs((A.figY ?? 0) - (B.figY ?? 0)) > 2 || Math.abs((A.figTilt ?? 0) - (B.figTilt ?? 0)) > 0.5)) {
+    for (const key of ['figX', 'figY', 'figZ', 'figTilt', 'figRot']) target[key] = dom[key] ?? DEFAULTS[key];
+  }
   pick = { look: dom.look ?? 'cursor', point: dom.point ?? null, pointEl: dom.point };
   blendBell = B ? Math.sin(Math.PI * t) : 0;
 
@@ -172,7 +177,7 @@ function worldFromEl(sel, planeZ) {
 
 // ---------------------------------------------------------------- arranque
 const labels = new Labels($('#labels'), $('#hud'));
-let figure, main, ghosts = [], floor, territory, clinic;
+let figure, main, ghosts = [], floor, territory, clinic, rings;
 let lenis;
 const boot = $('#boot');
 
@@ -194,7 +199,7 @@ async function start() {
   await figure.load(import.meta.env.BASE_URL + 'models/Xbot.glb', setLoad, QUALITY);
   main = figure.makeInstance({ main: true });
   for (let k = 1; k <= 4; k++) {
-    const g = figure.makeInstance({ tint: 0.88, drawFraction: 0.38 });
+    const g = figure.makeInstance({ tint: 0.88, drawFraction: 0.38, interior: k <= 2 });
     g.k = k;
     g.actions.idle.setEffectiveWeight(0);
     g.actions.walk.setEffectiveWeight(1);
@@ -205,12 +210,13 @@ async function start() {
   floor = makeFloor(scene, shared, lowPower ? 1600 : 2600);
   territory = new Territory(scene, shared, QUALITY);
   clinic = new Clinic(scene, shared, QUALITY);
+  rings = new VitalRings(main.holder, shared, new THREE.Vector3(0.012, 1.275, 0.02));
 
   const n = figure.pointCount.toLocaleString('es-ES');
   $('#ptsCount').textContent = n;
   document.querySelectorAll('[data-pts]').forEach((el) => (el.textContent = n));
 
-  labels.build({ figure, main, ghosts, territory, clinic, ZONES, terrainH, riverX, vitals });
+  labels.build({ figure, main, ghosts, territory, clinic, rings, ZONES, terrainH, riverX, vitals });
 
   resize();
   boot.style.setProperty('--load-eye', '1');
@@ -268,7 +274,7 @@ const camPos = new THREE.Vector3();
 let wR = 0, wL = 0, side = 'Right';
 let nodW = 0, nodUntil = 0;
 // constantes del gemelo: el corazón late de verdad a este ritmo y el electro lo dibuja
-const vitals = { bpm: 66, phase: 0, beat: 0, breath: 0, rpm: 14 };
+const vitals = { bpm: 66, phase: 0, beat: 0, breath: 0, breathPh: 0, rpm: 14 };
 const beatShape = (ph) => Math.exp(-(((ph - 0.26) / 0.045) ** 2)) + 0.45 * Math.exp(-(((ph - 0.44) / 0.06) ** 2));
 let fps = 60;
 
@@ -286,6 +292,16 @@ function loop(now) {
   // suaviza todo el estado hacia el objetivo
   for (const key in target) {
     if (typeof target[key] === 'number') state[key] = damp(state[key], target[key], 5.5, dt);
+  }
+  // con la figura invisible, se recoloca de golpe (así no cruza la clínica volando)
+  if (target.figOpacity < 0.03 && state.figOpacity < 0.08) {
+    for (const key of ['figX', 'figY', 'figZ', 'figRot', 'figTilt', 'walk']) state[key] = target[key];
+  }
+  // un salto grande (de la cama al suelo): se teletransporta y se vuelve a ensamblar
+  if (Math.hypot(target.figX - state.figX, target.figY - state.figY, target.figZ - state.figZ) > 2.5) {
+    for (const key of ['figX', 'figY', 'figZ', 'figRot', 'figTilt', 'walk']) state[key] = target[key];
+    state.figOpacity = 0;
+    glitchUntil = performance.now() / 1000 + 0.35;
   }
   const S = state;
 
@@ -314,7 +330,8 @@ function loop(now) {
   vitals.rpm = 14 + (vitals.bpm - 66) * 0.12;
   vitals.phase += dt * vitals.bpm / 60;
   vitals.beat = beatShape(vitals.phase % 1);
-  vitals.breath = Math.sin(t * Math.PI * 2 * vitals.rpm / 60);
+  vitals.breathPh += dt * vitals.rpm / 60;
+  vitals.breath = Math.sin(vitals.breathPh * Math.PI * 2);
   const O = figure.organU;
   O.uInterior.value = S.interior;
   O.uBeat.value = vitals.beat;
@@ -326,6 +343,7 @@ function loop(now) {
   O.uNerves.value = S.nerves;
   O.uLesion.value = S.lesion;
   O.uVessels.value = S.vessels;
+  O.uWatch.value = S.watch;
 
   // cámara
   camPos.set(S.camX, S.camY, S.camZ);
@@ -343,10 +361,10 @@ function loop(now) {
   camera.updateMatrixWorld();
 
   // figura principal
-  main.holder.position.set(S.figX, 0, S.figZ);
-  main.holder.rotation.y = S.figRot;
+  main.holder.position.set(S.figX, S.figY, S.figZ);
+  main.holder.rotation.set(-Math.PI / 2 * S.figTilt, S.figRot, 0);
   figure.setOpacity(main, S.figOpacity);
-  main.interior.visible = main.visible && S.interior > 0.002;
+  main.interior.visible = main.visible && (S.interior > 0.002 || S.watch > 0.002);
   // asiente cuando alguien se acerca al correo
   nodW = damp(nodW, t < nodUntil ? 1 : 0, 6, dt);
   if (nodW < 0.01 && t >= nodUntil) main.actions.agree.time = 0;
@@ -360,12 +378,16 @@ function loop(now) {
   let lt = null;
   if (pick.look === 'cursor') {
     lt = pointerSeen ? worldFromNdc(mouse.x, mouse.y, S.figZ + 1.4) : camera.position.clone();
+  } else if (pick.look === 'wrist') {
+    lt = main.bones.LeftHand.getWorldPosition(new THREE.Vector3());
   } else if (pick.look === 'cam') {
     lt = camera.position.clone();
   } else if (pick.look) {
     lt = worldFromEl(pick.look, S.figZ + 0.4);
   }
   if (lt) lookTarget.lerp(lt, 1 - Math.exp(-6 * dt));
+  // gesto del reloj: sube la muñeca izquierda delante del pecho
+  if (S.reachW > 0.002) figure.reach(main, main.holder.localToWorld(new THREE.Vector3(0.0, 1.4, 0.36)), S.reachW, 'Left');
   figure.look(main, lookTarget, S.lookW * (1 - nodW * 0.85));
 
   // ¿a dónde señala?
@@ -401,6 +423,12 @@ function loop(now) {
       g.actions.walk.setEffectiveWeight(0);
       g.actions.idle.setEffectiveWeight(1);
       g.mixer.update(dt);
+      if (g.organ) {
+        g.organ.uInterior.value = S.trial * S.interior;
+        g.organ.uLesion.value = g.k === 1 ? S.lesionA : S.lesionC;
+        g.interior.visible = true;
+      }
+      for (const q of g.points) if (q.pts.material.uniforms.uSkin) q.pts.material.uniforms.uSkin.value = q.pts === g.interior ? 1 : lerp(1, 0.5, S.trial);
     } else {
       g.holder.position.set(S.figX, 0, S.figZ).addScaledVector(fwd, g.k * 0.44);
       g.holder.rotation.y = S.figRot;
@@ -408,6 +436,8 @@ function loop(now) {
       g.actions.walk.setEffectiveWeight(1);
       g.actions.walk.time = (main.actions.walk.time + g.k * 0.3) % dur;
       g.mixer.update(0);
+      if (g.interior) g.interior.visible = false;
+      for (const q of g.points) if (q.pts.material.uniforms.uSkin) q.pts.material.uniforms.uSkin.value = 1;
     }
     figure.commit(g);
   });
@@ -417,7 +447,8 @@ function loop(now) {
   floor.visible = S.floor > 0.002;
 
   territory.update(S, camera.position, camTgt);
-  clinic.update(S, camera.position);
+  clinic.update(S, camera.position, t);
+  rings.update(S.ecg, S.resp, vitals, S.figOpacity);
 
   renderer.render(scene, camera);
   labels.update(S, camera, dt, { pick, mouse, pointerSeen, now: t, pointTarget });

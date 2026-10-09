@@ -316,7 +316,7 @@ export class Figure {
     this.organU = {
       uInterior: { value: 0 }, uBeat: { value: 0 }, uBeatPhase: { value: 0 }, uBreath: { value: 0 },
       uFocusHeart: { value: 0 }, uFocusBrain: { value: 0 }, uFocusLesion: { value: 0 },
-      uNerves: { value: 0 }, uLesion: { value: 1 }, uVessels: { value: 1 },
+      uNerves: { value: 0 }, uLesion: { value: 1 }, uVessels: { value: 1 }, uWatch: { value: 0 },
     };
   }
 
@@ -367,7 +367,7 @@ export class Figure {
     this.organCount = inner.count;
   }
 
-  makeInstance({ main = false, tint = 0, drawFraction = 1 } = {}) {
+  makeInstance({ main = false, tint = 0, drawFraction = 1, interior = false } = {}) {
     const root = main ? this.gltf.scene : cloneSkinned(this.gltf.scene);
     const holder = new THREE.Group();
     holder.add(root);
@@ -420,8 +420,8 @@ export class Figure {
       inst.points.push({ pts, mesh: o });
     });
 
-    // el interior solo lo lleva la figura principal
-    if (main) {
+    // el interior lo lleva la figura principal (y los gemelos del ensayo)
+    if (main || interior) {
       const surf = inst.points.find((q) => q.mesh.name.includes('Surface')).mesh;
       const mat = new THREE.ShaderMaterial({
         vertexShader: ORGAN_VERT,
@@ -431,6 +431,8 @@ export class Figure {
         blending: THREE.AdditiveBlending,
         uniforms: {
           ...this.organU,
+          uLesion: main ? this.organU.uLesion : { value: 1 },
+          uInterior: main ? this.organU.uInterior : { value: 0 },
           uTime: this.shared.uTime, uProj: this.shared.uProj, uFlick: this.shared.uFlick, uAtlas: this.shared.uAtlas,
           uSize: { value: 0.017 },
           boneTexture: { value: surf.skeleton.boneTexture },
@@ -447,6 +449,7 @@ export class Figure {
       this.scene.add(pts);
       inst.points.push({ pts, mesh: surf });
       inst.interior = pts;
+      inst.organ = mat.uniforms;
     }
 
     for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'HeadTop_End',
@@ -536,6 +539,39 @@ export class Figure {
     _q2.setFromUnitVectors(curDir, wantDir);
     _qi.identity().slerp(_q2, weight);
     rotateBoneWorld(arm, _qi);
+  }
+
+  // Lleva la mano a un punto doblando el codo de verdad (IK de dos huesos):
+  // el codo se coloca con la ley de los cosenos, mirando hacia abajo y atrás
+  reach(inst, target, weight, S = 'Left') {
+    if (weight <= 0.001) return;
+    const { bones } = inst;
+    const arm = bones[S + 'Arm'], fore = bones[S + 'ForeArm'], hand = bones[S + 'Hand'];
+    const a = arm.getWorldPosition(new THREE.Vector3());
+    const b = fore.getWorldPosition(new THREE.Vector3());
+    const c = hand.getWorldPosition(new THREE.Vector3());
+    const l1 = a.distanceTo(b), l2 = b.distanceTo(c);
+    const toT = target.clone().sub(a);
+    const d = THREE.MathUtils.clamp(toT.length(), Math.abs(l1 - l2) + 0.01, (l1 + l2) * 0.995);
+    const dir = toT.normalize();
+    // polo del codo: hacia abajo, un poco hacia fuera y hacia atrás
+    const lat = bones.LeftArm.getWorldPosition(new THREE.Vector3()).sub(bones.RightArm.getWorldPosition(new THREE.Vector3())).normalize();
+    if (S === 'Right') lat.negate();
+    inst.holder.getWorldQuaternion(_q2);
+    const back = new THREE.Vector3(0, 0, -1).applyQuaternion(_q2);
+    const pole = new THREE.Vector3(0, -1, 0).addScaledVector(lat, 0.55).addScaledVector(back, 0.45);
+    const pv = pole.sub(dir.clone().multiplyScalar(pole.dot(dir))).normalize();
+    const cosA = THREE.MathUtils.clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1);
+    const elbow = a.clone().addScaledVector(dir, l1 * cosA).addScaledVector(pv, l1 * Math.sqrt(1 - cosA * cosA));
+    _q.setFromUnitVectors(b.clone().sub(a).normalize(), elbow.sub(a).normalize());
+    _qi.identity().slerp(_q, weight);
+    rotateBoneWorld(arm, _qi);
+    fore.getWorldPosition(b);
+    hand.getWorldPosition(c);
+    const goal = a.clone().addScaledVector(dir, d);
+    _q.setFromUnitVectors(c.clone().sub(b).normalize(), goal.sub(b).normalize());
+    _qi.identity().slerp(_q, weight);
+    rotateBoneWorld(fore, _qi);
   }
 
   // qué brazo queda más cerca del objetivo

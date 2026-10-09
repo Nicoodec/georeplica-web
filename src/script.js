@@ -22,8 +22,9 @@ export const DEFAULTS = {
   shade: 0, shadeRight: 0, mHero: 0,
   // salud
   interior: 0, skin: 1, fHeart: 0, fBrain: 0, fLesion: 0, nerves: 0, lesion: 1, vessels: 1,
-  trial: 0, ecg: 0, hrReact: 0, clinic: 0, build: 0, explode: 0, flows: 0,
-  lblOrgans: 0, lblHeart: 0, lblBrain: 0, lblTrial: 0, lblClinic: 0,
+  trial: 0, ecg: 0, resp: 0, hrReact: 0, clinic: 0, build: 0, explode: 0, flows: 0,
+  figY: 0, figTilt: 0, focus604: 0, reachW: 0, watch: 0, trialT: 0, lesionA: 1, lesionC: 1,
+  lblOrgans: 0, lblHeart: 0, lblBrain: 0, lblTrial: 0, lblClinic: 0, lblWatch: 0, lblVitals: 0, lblPatient: 0,
 };
 
 // Vista aérea común a todo el territorio
@@ -60,17 +61,24 @@ export const KEYS = {
   }),
 
   // ---- salud: la misma figura, por dentro
-  salud: (p) => ({
-    figX: 0.95, figRot: -0.3,
-    camX: lerp(0.4, 0.55, ease(p)), camY: 1.24, camZ: lerp(4.5, 3.4, ease(p)), tgtX: 0.6, tgtY: lerp(1.06, 1.2, ease(p)),
-    interior: ease(p * 1.7), skin: lerp(1, 0.32, ease(p * 1.7)), spark: 0.4,
-    look: 'cam', lookW: 0.35, lblOrgans: ease((p - 0.3) * 2.5), parallax: 0.5,
-  }),
+  // primero mira su reloj (de ahí salen los datos); después se vuelve transparente
+  salud: (p) => {
+    const gesture = bell(p, 0.0, 0.62);
+    const inside = ease((p - 0.32) * 2.2);
+    return {
+      figX: 0.95, figRot: -0.3,
+      camX: lerp(0.5, 0.55, ease(p)), camY: lerp(1.3, 1.24, ease(p)), camZ: lerp(3.3, 3.4, ease(p)), tgtX: 0.62, tgtY: lerp(1.2, 1.18, ease(p)),
+      reachW: gesture, watch: 1, lblWatch: bell(p, 0.06, 0.5),
+      look: 'wrist', lookW: 0.25 + gesture * 0.7,
+      interior: inside, skin: lerp(1, 0.32, inside), spark: 0.4,
+      lblOrgans: ease((p - 0.62) * 3), parallax: 0.4,
+    };
+  },
 
   corazon: (p) => ({
     figX: 0.78, figRot: -0.22,
-    camX: lerp(0.5, 0.42, p), camY: 1.37, camZ: lerp(1.75, 1.5, p), tgtX: 0.58, tgtY: 1.3,
-    interior: 1, skin: 0.1, fHeart: 1, ecg: 1, lblHeart: 1, hrReact: 1, spark: 0,
+    camX: lerp(0.62, 0.5, p), camY: lerp(1.78, 1.7, p), camZ: lerp(1.95, 1.75, p), tgtX: 0.6, tgtY: 1.2,
+    interior: 1, skin: 0.1, fHeart: 1, ecg: 1, resp: 1, lblVitals: 1, hrReact: 1, spark: 0, watch: 0.7,
     look: 'cam', lookW: 0.15, parallax: 0.3,
   }),
 
@@ -79,23 +87,52 @@ export const KEYS = {
     camX: lerp(0.5, 0.45, ease(p)), camY: lerp(1.68, 1.25, ease(p)), camZ: lerp(1.25, 3.9, ease(p)),
     tgtX: 0.62, tgtY: lerp(1.64, 1.02, ease(p)),
     interior: 1, skin: 0.1, fBrain: 1, nerves: 1, vessels: 0.25, lblBrain: 1 - ease((p - 0.55) * 4), spark: 0,
-    lookW: 0, parallax: 0.3,
+    lookW: 0, parallax: 0.3, watch: 0.4,
   }),
 
-  ensayo: (p) => ({
-    figX: 1.35, figRot: -0.12,
-    camX: 1.35, camY: 1.2, camZ: 6.3, tgtX: 1.25, tgtY: 1.0, shift: 0.19,
-    trial: 1, interior: 1, skin: 0.4, fLesion: 1, vessels: 0.45, lesion: lerp(1, 0.22, ease(p * 1.25)),
-    lblTrial: 1, lookW: 0, spark: 0.3,
-  }),
+  // tres gemelos, tres tratamientos; pasan los días y cada nódulo evoluciona distinto
+  ensayo: (p) => {
+    const tt = ease(p * 1.2);
+    return {
+      figX: 1.35, figRot: -0.12,
+      camX: 1.35, camY: 1.2, camZ: 6.3, tgtX: 1.25, tgtY: 1.0, shift: 0.19,
+      trial: 1, trialT: tt, interior: 1, skin: 0.4, fLesion: 1, vessels: 0.45,
+      lesion: lerp(1, 0.22, tt), lesionA: lerp(1, 1.28, tt), lesionC: lerp(1, 0.62, tt),
+      lblTrial: 1, lookW: 0, spark: 0.3,
+    };
+  },
 
-  clinica: (p) => ({
-    figX: 0, figZ: lerp(3.2, -0.4, p), figRot: Math.PI, walk: 1,
-    camX: lerp(24, 46, ease(p)), camY: lerp(10, 38, ease(p)), camZ: lerp(26, 62, ease(p)),
-    tgtX: 2, tgtY: lerp(3, 19, ease(p)), tgtZ: -12, shift: 0.18,
-    clinic: 1, build: ease(p * 2.4), explode: ease((p - 0.42) * 2.2), flows: ease((p - 0.3) * 2),
-    lblClinic: ease((p - 0.55) * 3), floor: 0.4, lookW: 0, parallax: 0, shade: 0.6, glyphSize: 0.042,
-  }),
+  // la figura entra en la clínica, el edificio se despliega... y al final está en su cama
+  clinica: (p) => {
+    const walkP = Math.min(p / 0.55, 1);
+    const toWide = ease(p / 0.55);
+    const dive = ease((p - 0.66) / 0.26);
+    const inBed = p > 0.65;
+    const k = {
+      clinic: 1, build: ease(p / 0.3), explode: ease((p - 0.3) / 0.25), flows: ease((p - 0.3) / 0.2) * (1 - dive * 0.7),
+      lblClinic: ease((p - 0.4) * 4) * (1 - ease((p - 0.6) * 10)),
+      lookW: 0, parallax: 0, shade: 0.6, glyphSize: 0.042, shift: 0.18,
+    };
+    if (!inBed) {
+      Object.assign(k, {
+        camX: lerp(24, 46, toWide), camY: lerp(10, 38, toWide), camZ: lerp(26, 62, toWide),
+        tgtX: lerp(1, 2, toWide), tgtY: lerp(3, 19, toWide), tgtZ: -12,
+        figX: 0, figY: 0, figZ: lerp(3.2, -0.4, walkP), figRot: Math.PI, figTilt: 0, walk: 1,
+        figOpacity: 1 - ease((p - 0.56) / 0.06), floor: 0.4,
+      });
+    } else {
+      // cama de la 604: (9,9 · 32,4 · −17,4); la figura se tumba con los pies hacia el pasillo
+      Object.assign(k, {
+        camX: lerp(46, 14.1, dive), camY: lerp(38, 35.3, dive), camZ: lerp(62, -16.3, dive),
+        tgtX: lerp(2, 9.9, dive), tgtY: lerp(19, 32.5, dive), tgtZ: lerp(-12, -17.5, dive), focus604: dive,
+        figX: 9.9, figY: 32.56, figZ: -16.5, figRot: 0, figTilt: 1, walk: 0,
+        figOpacity: ease((p - 0.7) / 0.1), floor: 0,
+        interior: ease((p - 0.72) / 0.12) * 0.9, skin: 0.9, ecg: ease((p - 0.78) / 0.1) * 0.8, resp: ease((p - 0.78) / 0.1) * 0.6,
+        lblPatient: ease((p - 0.82) * 6), glyphSize: 0.036,
+      });
+    }
+    return k;
+  },
 
   territorio: (p) => ({
     ...terrainBase,
@@ -150,7 +187,7 @@ export const KEYS = {
 
 // En móvil el texto va abajo: la figura se centra y sube, el territorio no se desplaza
 export function mobileAdjust(s) {
-  const onFigure = s.terrain < 0.5;
+  const onFigure = s.terrain < 0.5 && s.clinic < 0.5; // en la clínica la figura no se recoloca
   s.shift = 0;
   if (onFigure) {
     const keepX = s.ghosts > 0.5 ? 0.5 : 0;
@@ -159,16 +196,17 @@ export function mobileAdjust(s) {
     s.camX *= 0.25;
     s.camZ += 1.7 + s.ghosts * 2.6 + s.mHero * 1.1;
     s.tgtY += -0.5 + s.mHero * 0.42;
-  } else {
+  } else if (s.terrain >= 0.5) {
     s.tgtY -= 6;
     s.camZ *= 1.15;
   }
   // escenas anchas (clínica, tres gemelos): en vertical hay que alejarse más
-  const m = 1 + 0.95 * s.clinic + 1.2 * s.trial;
+  const inBed = s.figTilt;
+  const m = 1 + 0.95 * s.clinic * (1 - inBed * 0.55) + 1.2 * s.trial;
   if (m > 1.001) {
     s.camX = s.tgtX + (s.camX - s.tgtX) * m;
     s.camY = s.tgtY + (s.camY - s.tgtY) * m;
     s.camZ = s.tgtZ + (s.camZ - s.tgtZ) * m;
-    s.tgtY -= 9 * s.clinic + 0.35 * s.trial;
+    s.tgtY -= 9 * s.clinic * (1 - inBed) + 0.35 * s.trial + 0.95 * inBed;
   }
 }

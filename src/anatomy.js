@@ -9,7 +9,7 @@ import { GLSL_COMMON } from './glyphs.js';
 // con el cuerpo en cualquier pose.
 // ---------------------------------------------------------------------------
 
-export const ORGAN = { heart: 0, lungs: 1, brain: 2, spine: 3, artery: 4, vein: 5, lesion: 6, nerve: 7 };
+export const ORGAN = { heart: 0, lungs: 1, brain: 2, spine: 3, artery: 4, vein: 5, lesion: 6, nerve: 7, watch: 8 };
 
 export const ORGAN_VERT = /* glsl */ `
   precision highp float;
@@ -19,7 +19,7 @@ export const ORGAN_VERT = /* glsl */ `
   uniform mat4 bindMatrix;
   uniform mat4 bindMatrixInverse;
   uniform float uTime, uSize, uProj, uOpacity, uFlick, uInterior, uBeat, uBeatPhase, uBreath,
-                uFocusHeart, uFocusBrain, uFocusLesion, uNerves, uLesion, uVessels;
+                uFocusHeart, uFocusBrain, uFocusLesion, uNerves, uLesion, uVessels, uWatch;
   attribute vec4 skinIndex;
   attribute vec4 skinWeight;
   attribute vec4 aOrgan;  // órgano, distancia (al corazón o al cerebro), semilla, capa
@@ -51,7 +51,8 @@ export const ORGAN_VERT = /* glsl */ `
     bool isArtery = id > 3.5 && id < 4.5;
     bool isVein = id > 4.5 && id < 5.5;
     bool isLesion = id > 5.5 && id < 6.5;
-    bool isNerve = id > 6.5;
+    bool isNerve = id > 6.5 && id < 7.5;
+    bool isWatch = id > 7.5;
 
     // latido, respiración y tamaño de la lesión, en espacio de reposo
     vec3 pos = position;
@@ -113,6 +114,18 @@ export const ORGAN_VERT = /* glsl */ `
       a = 1.3 * (0.65 + 0.35 * sin(uTime * 4.0)) * uFocusLesion;
       glyph = flipGlyph(seed, 18.0, uTime);
       mine = uFocusLesion;
+    } else if (isWatch) {
+      // el reloj: la esfera late con el corazón, la correa titila
+      float face = step(0.8, aOrgan.w);
+      col = mix(vec3(0.6, 0.8, 1.0), blue, face);
+      a = (0.22 + face * (0.3 + uBeat * 0.6)) * uWatch;
+      glyph = flipGlyph(seed, 14.0 * uFlick, uTime);
+      size *= 0.85;
+      // el reloj se ve aunque el interior esté apagado
+      vColor = col; vGlyph = glyph;
+      vAlpha = a * uOpacity;
+      gl_PointSize = size * uProj / -mv.z;
+      return;
     } else if (isNerve) {
       float sig = smoothstep(0.9, 1.0, fract(dist * 0.9 - uTime * 1.25 + floor(seed * 3.0) * 0.33));
       col = mix(bone, vec3(0.75, 0.88, 1.0), sig);
@@ -365,6 +378,25 @@ export function buildInterior(src, scale = 1) {
     polyline(chain(['Hips', sd + 'UpLeg', sd + 'Leg', sd + 'Foot', sd + 'ToeBase']), ORGAN.nerve, st, { jitter: 0.002, dist0: dHips });
   }
 
+  // reloj en la muñeca izquierda: correa y esfera, de donde salen los datos
+  const wristC = W('LeftHand').lerp(W('LeftForeArm'), 0.14);
+  const fdir = W('LeftHand').sub(W('LeftForeArm')).normalize();
+  const wu = new THREE.Vector3(0, 1, 0).cross(fdir).normalize();
+  const wv = fdir.clone().cross(wu).normalize();
+  const wristI = [idx('LeftForeArm'), idx('LeftHand'), 0, 0];
+  for (let i = 0; i < N(300); i++) {
+    const an = rng() * Math.PI * 2;
+    const r = 0.03 + rng() * 0.004;
+    const X = wristC.clone().addScaledVector(wu, Math.cos(an) * r).addScaledVector(wv, Math.sin(an) * r).addScaledVector(fdir, (rng() - 0.5) * 0.022);
+    add(X, wristC, wristI, [0.25, 0.75, 0, 0], ORGAN.watch);
+    ORG[ORG.length - 1] = 0.3 * rng(); // correa
+  }
+  for (let i = 0; i < N(160); i++) {
+    const X = wristC.clone().addScaledVector(wv, 0.036).addScaledVector(wu, (rng() - 0.5) * 0.03).addScaledVector(fdir, (rng() - 0.5) * 0.034);
+    add(X, wristC, wristI, [0.25, 0.75, 0, 0], ORGAN.watch);
+    ORG[ORG.length - 1] = 0.85 + 0.15 * rng(); // esfera
+  }
+
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(POS, 3));
   geo.setAttribute('aCenter', new THREE.Float32BufferAttribute(CEN, 3));
@@ -381,6 +413,7 @@ export function buildInterior(src, scale = 1) {
     lesion: anchor('Spine2', lesionC),
     spine: anchor('Spine1', new THREE.Vector3(chest.cx, s1.y, chest.back + chest.d * 0.22)),
     vessel: anchor('LeftForeArm', W('LeftForeArm').lerp(W('LeftHand'), 0.5)),
+    watch: anchor('LeftHand', wristC),
   };
   return { geo, anchors, surf, count: POS.length / 3 };
 }

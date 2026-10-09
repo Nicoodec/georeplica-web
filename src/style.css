@@ -298,6 +298,8 @@ main { position: relative; }
 .scene--hero { height: 100vh; }
 .scene--platform { height: 230vh; }
 .scene--contact { height: 100vh; }
+#clinica { height: 420vh; }
+#salud { height: 300vh; }
 
 .panel {
   position: sticky;
@@ -583,6 +585,7 @@ body.is-live .hero__word { opacity: 1; }
   .steps h4 { font-size: 19px; }
   .steps p { font-size: 13.5px; }
   .creds { display: none; }
+  .spec { display: none; }
   .scene--platform .panel h2 { font-size: 34px; }
   .contact__q { font-size: 58px; }
   .foot { left: 20px; right: 20px; padding-right: 0; flex-wrap: wrap; gap: 6px 16px; bottom: 18px; }
