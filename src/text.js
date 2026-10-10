@@ -1,25 +1,30 @@
 // Palabras que suben tras una máscara, y rótulos que se "decodifican":
 // cada letra pasa por 0 y 1 antes de quedarse quieta.
 
+export function splitEl(el) {
+  const text = el.textContent.trim();
+  const words = text.split(/\s+/);
+  el.setAttribute('aria-label', text);
+  el.innerHTML = words
+    .map((w, i) => `<span class="w" aria-hidden="true"><span style="--i:${i}">${w}</span></span>`)
+    .join(' ');
+}
+
+export function prepScramble(el) {
+  const nodes = [];
+  const walk = (n) => {
+    for (const c of n.childNodes) {
+      if (c.nodeType === 3 && c.textContent.trim()) nodes.push({ node: c, text: c.textContent });
+      else if (c.nodeType === 1 && !c.id) walk(c);
+    }
+  };
+  walk(el);
+  el._scr = nodes;
+}
+
 export function initText() {
-  document.querySelectorAll('[data-split]').forEach((el) => {
-    const words = el.textContent.trim().split(/\s+/);
-    el.setAttribute('aria-label', el.textContent.trim());
-    el.innerHTML = words
-      .map((w, i) => `<span class="w" aria-hidden="true"><span style="--i:${i}">${w}</span></span>`)
-      .join(' ');
-  });
-  document.querySelectorAll('[data-scramble]').forEach((el) => {
-    const nodes = [];
-    const walk = (n) => {
-      for (const c of n.childNodes) {
-        if (c.nodeType === 3 && c.textContent.trim()) nodes.push({ node: c, text: c.textContent });
-        else if (c.nodeType === 1 && !c.id) walk(c);
-      }
-    };
-    walk(el);
-    el._scr = nodes;
-  });
+  document.querySelectorAll('[data-split]').forEach(splitEl);
+  document.querySelectorAll('[data-scramble]').forEach(prepScramble);
 }
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;

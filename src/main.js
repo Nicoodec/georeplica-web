@@ -8,7 +8,8 @@ import { Clinic } from './clinic.js';
 import { VitalRings } from './vitals.js';
 import { KEYS, DEFAULTS, mobileAdjust } from './script.js';
 import { Labels } from './labels.js';
-import { initText, scramble } from './text.js';
+import { initText, scramble, splitEl, prepScramble } from './text.js';
+import { initLang, setLang, lang } from './i18n.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const clamp = THREE.MathUtils.clamp;
@@ -189,6 +190,7 @@ function setLoad(p) {
 }
 
 async function start() {
+  initLang();
   initText();
   document.body.classList.add('is-booting');
   setLoad(0);
@@ -212,9 +214,16 @@ async function start() {
   clinic = new Clinic(scene, shared, QUALITY);
   rings = new VitalRings(main.holder, shared, new THREE.Vector3(0.012, 1.275, 0.02));
 
-  const n = figure.pointCount.toLocaleString('es-ES');
-  $('#ptsCount').textContent = n;
-  document.querySelectorAll('[data-pts]').forEach((el) => (el.textContent = n));
+  fillCounts();
+  $('#langBtn').addEventListener('click', () => {
+    setLang(lang === 'en' ? 'es' : 'en', (els) => {
+      for (const el of els) {
+        if (el.hasAttribute('data-split')) splitEl(el);
+        if (el.hasAttribute('data-scramble')) { prepScramble(el); if (el.closest('.is-in')) scramble(el); }
+      }
+      fillCounts();
+    });
+  });
 
   labels.build({ figure, main, ghosts, territory, clinic, rings, ZONES, terrainH, riverX, vitals });
 
@@ -262,6 +271,15 @@ async function start() {
     if (q.get('cam')) window.__cam = JSON.parse(q.get('cam'));
   }
   requestAnimationFrame(loop);
+}
+
+// cifras que dependen del idioma (separador de miles)
+function fillCounts() {
+  if (!figure) return;
+  const n = figure.pointCount.toLocaleString(lang === 'en' ? 'en-GB' : 'es-ES');
+  const pc = document.getElementById('ptsCount');
+  if (pc) pc.textContent = n;
+  document.querySelectorAll('[data-pts]').forEach((el) => (el.textContent = n));
 }
 
 let assembleT0 = 0;
@@ -502,7 +520,6 @@ function loop(now) {
 // ---------------------------------------------------------------- cabecera
 const clockEl = $('#clock');
 const depthEl = $('#depthVal');
-const fireEl = $('#fireClock');
 const shadeEl = $('#shade');
 const topEl = $('.top');
 function hudChrome() {
@@ -514,7 +531,8 @@ function hudChrome() {
   topEl.style.setProperty('--shade', state.shade.toFixed(3));
   shadeEl.classList.toggle('shade--right', state.shadeRight > 0.5);
   const mins = Math.round(state.fireT * 6 * 60);
-  fireEl.textContent = `T+${pad(Math.floor(mins / 60))}:${pad(mins % 60)}`;
+  const fireEl = document.getElementById('fireClock'); // se rehace al cambiar de idioma
+  if (fireEl) fireEl.textContent = `T+${pad(Math.floor(mins / 60))}:${pad(mins % 60)}`;
 }
 
 addEventListener('resize', () => { resize(); lenis?.resize(); });

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { tr, lang } from './i18n.js';
 
 // ---------------------------------------------------------------------------
 // Etiquetas ancladas al mundo 3D. El texto va en HTML (nítido a cualquier
@@ -6,7 +7,7 @@ import * as THREE from 'three';
 // Los valores del cuerpo se MIDEN del esqueleto en cada fotograma.
 // ---------------------------------------------------------------------------
 
-const num = (v, d = 2) => v.toFixed(d).replace('.', ',');
+const num = (v, d = 2) => (lang === 'en' ? v.toFixed(d) : v.toFixed(d).replace('.', ','));
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 const _c = new THREE.Vector3();
@@ -50,7 +51,7 @@ export class Labels {
       anchor: (o) => wp(B.HeadTop_End, o),
       text: () => {
         const y = B.HeadTop_End.getWorldPosition(_a).y;
-        return `Cabeza <b>${num(y)} m</b><small>altura sobre el suelo</small>`;
+        return tr(`Cabeza <b>${num(y)} m</b><small>altura sobre el suelo</small>`, `Head <b>${num(y)} m</b><small>height above ground</small>`);
       },
     });
     this.add({
@@ -60,7 +61,7 @@ export class Labels {
         wp(B.Hips, _a); wp(B.Neck, _b);
         const v = _b.sub(_a).normalize();
         const deg = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(v.y, -1, 1)));
-        return `Torso <b>${num(deg, 1)}°</b><small>inclinación</small>`;
+        return tr(`Torso <b>${num(deg, 1)}°</b><small>inclinación</small>`, `Torso <b>${num(deg, 1)}°</b><small>tilt</small>`);
       },
     });
     this.add({
@@ -73,7 +74,7 @@ export class Labels {
           handSpeed += (s - handSpeed) * 0.08;
         }
         prevHand = (prevHand || new THREE.Vector3()).copy(_a);
-        return `Mano D. <b>${num(handSpeed * 100, 1)} cm/s</b><small>velocidad</small>`;
+        return tr(`Mano D. <b>${num(handSpeed * 100, 1)} cm/s</b><small>velocidad</small>`, `R. hand <b>${num(handSpeed * 100, 1)} cm/s</b><small>speed</small>`);
       },
       live: true,
     });
@@ -85,7 +86,7 @@ export class Labels {
         const u = _a.sub(_b).normalize();
         const v = _c.sub(_b).normalize();
         const deg = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(u.dot(v), -1, 1)));
-        return `Rodilla I. <b>${num(deg, 1)}°</b><small>flexión</small>`;
+        return tr(`Rodilla I. <b>${num(deg, 1)}°</b><small>flexión</small>`, `L. knee <b>${num(deg, 1)}°</b><small>flexion</small>`);
       },
     });
     this.add({
@@ -95,7 +96,7 @@ export class Labels {
         wp(B.Hips, _a); wp(B.LeftFoot, _b); wp(B.RightFoot, _c);
         const seg = _c.clone().sub(_b);
         const t = THREE.MathUtils.clamp(_a.sub(_b).dot(seg) / Math.max(seg.lengthSq(), 1e-6), 0, 1);
-        return `Apoyo <b>${Math.round(t * 100)} % D</b><small>reparto de carga</small>`;
+        return tr(`Apoyo <b>${Math.round(t * 100)} % D</b><small>reparto de carga</small>`, `Stance <b>${Math.round(t * 100)}% R</b><small>load split</small>`);
       },
     });
 
@@ -103,7 +104,7 @@ export class Labels {
     this.add({
       key: 'lblGhost', side: 0, dy: -30, cls: 'lbl--lc',
       anchor: (o) => { wp(B.HeadTop_End, o); o.y += 0.08; return o; },
-      text: () => `t<sub>0</sub> <b>ahora</b>`,
+      text: () => tr(`t<sub>0</sub> <b>ahora</b>`, `t<sub>0</sub> <b>now</b>`),
     });
     ghosts.forEach((g) => {
       this.add({
@@ -118,7 +119,7 @@ export class Labels {
     this.scanItem = {
       key: 'lblScan', side: 1, dx: 30, dy: 0,
       anchor: (o, S) => o.set(S.figX + 0.42, S.scanY, S.figZ),
-      text: (dt, S) => `z = <b>${num(Math.max(S.scanY, 0), 3)} m</b><small>${S.scanY > 0.02 ? 'capturando' : 'réplica completa'}</small>`,
+      text: (dt, S) => `z = <b>${num(Math.max(S.scanY, 0), 3)} m</b><small>${S.scanY > 0.02 ? tr('capturando', 'capturing') : tr('réplica completa', 'replica complete')}</small>`,
       live: true,
     };
     this.add(this.scanItem);
@@ -128,33 +129,33 @@ export class Labels {
     this.add({
       key: 'lblFig', side: 1, dx: 40, dy: -46,
       anchor: (o) => o.set(0, 1.9, 0),
-      text: () => `Sujeto 001<small>la misma réplica, a escala</small>`,
+      text: () => tr(`Sujeto 001<small>la misma réplica, a escala</small>`, `Subject 001<small>the same replica, to scale</small>`),
     });
     this.add({
       key: 'lblCity', side: 1, dx: 50, dy: -60,
       anchor: (o) => o.set(-6, 15, -10),
-      text: () => `Ciudad<small>edificación · viario · movilidad</small>`,
+      text: () => tr(`Ciudad<small>edificación · viario · movilidad</small>`, `City<small>buildings · roads · mobility</small>`),
       cls: 'lbl--zone',
     });
     this.add({
       key: 'lblInd', side: 1, dx: 40, dy: -90, cls: 'lbl--heat lbl--zone',
       anchor: (o) => o.copy(territory.alarmTop),
-      text: () => `Depósito 05 <b>fallo previsto</b><small>vibración fuera de rango · margen 72 h</small>`,
+      text: () => tr(`Depósito 05 <b>fallo previsto</b><small>vibración fuera de rango · margen 72 h</small>`, `Tank 05 <b>failure predicted</b><small>vibration out of range · 72 h margin</small>`),
     });
     this.add({
       key: 'lblRural', side: 1, dx: 46, dy: -50, cls: 'lbl--zone',
       anchor: (o) => o.set(territory.sensors[0].x, H(territory.sensors[0].x, territory.sensors[0].y, 0.5), territory.sensors[0].y),
-      text: () => `Red de sensores <b>8 nodos</b><small>humedad · caudal · temperatura</small>`,
+      text: () => tr(`Red de sensores <b>8 nodos</b><small>humedad · caudal · temperatura</small>`, `Sensor network <b>8 nodes</b><small>humidity · flow · temperature</small>`),
     });
     this.add({
       key: 'lblFire', side: 1, dx: 50, dy: -56, cls: 'lbl--heat lbl--zone',
       anchor: (o) => o.set(ZONES.fire.x, H(ZONES.fire.x, ZONES.fire.y, 1), ZONES.fire.y),
-      text: () => `Foco <b>activo</b><small>viento del oeste · 18 km/h</small>`,
+      text: () => tr(`Foco <b>activo</b><small>viento del oeste · 18 km/h</small>`, `Fire <b>active</b><small>westerly wind · 18 km/h</small>`),
     });
     this.add({
       key: 'lblRiver', side: -1, dx: 46, dy: -40, cls: 'lbl--zone',
       anchor: (o) => o.set(riverX(30), H(riverX(30), 30, 0.5), 30),
-      text: () => `Río<small>cortafuegos natural</small>`,
+      text: () => tr(`Río<small>cortafuegos natural</small>`, `River<small>natural firebreak</small>`),
     });
 
     // --- salud: órganos anclados a sus huesos
@@ -165,41 +166,41 @@ export class Labels {
     this.heartAnchor = org('heart');
     this.add({
       key: 'lblOrgans', side: 1, dx: 64, dy: -56, anchor: org('heart'),
-      text: () => `Corazón <b>${Math.round(vitals.bpm)} lpm</b><small>≈ 100.000 latidos al día</small>`,
+      text: () => tr(`Corazón <b>${Math.round(vitals.bpm)} lpm</b><small>≈ 100.000 latidos al día</small>`, `Heart <b>${Math.round(vitals.bpm)} bpm</b><small>≈ 100,000 beats a day</small>`),
     });
     this.add({
       key: 'lblOrgans', side: -1, dx: 70, dy: -30, anchor: org('lung'),
-      text: () => `Pulmones <b>${Math.round(vitals.rpm)} rpm</b><small>respiraciones por minuto</small>`,
+      text: () => tr(`Pulmones <b>${Math.round(vitals.rpm)} rpm</b><small>respiraciones por minuto</small>`, `Lungs <b>${Math.round(vitals.rpm)}/min</b><small>breaths per minute</small>`),
     });
     this.add({
       key: 'lblOrgans', side: 1, dx: 54, dy: -34, anchor: org('brain'),
-      text: () => `Cerebro<small>actividad en tiempo real</small>`,
+      text: () => tr(`Cerebro<small>actividad en tiempo real</small>`, `Brain<small>real-time activity</small>`),
     });
     this.add({
       key: 'lblOrgans', side: 1, dx: 60, dy: 30, anchor: org('spine'),
-      text: () => `Columna<small>24 vértebras</small>`,
+      text: () => tr(`Columna<small>24 vértebras</small>`, `Spine<small>24 vertebrae</small>`),
     });
     this.add({
       key: 'lblOrgans', side: -1, dx: 40, dy: 34, anchor: org('vessel'),
-      text: () => `Sistema circulatorio<small>la onda sale con cada latido</small>`,
+      text: () => tr(`Sistema circulatorio<small>la onda sale con cada latido</small>`, `Circulatory system<small>a pulse wave leaves with every beat</small>`),
     });
     this.add({
       key: 'lblHeart', side: 1, dx: 90, dy: -110, anchor: org('heart'),
-      text: () => `Ritmo cardiaco <b>${Math.round(vitals.bpm)} lpm</b><small>ritmo sinusal · datos simulados</small>`,
+      text: () => tr(`Ritmo cardiaco <b>${Math.round(vitals.bpm)} lpm</b><small>ritmo sinusal · datos simulados</small>`, `Heart rate <b>${Math.round(vitals.bpm)} bpm</b><small>sinus rhythm · simulated data</small>`),
     });
     this.add({
       key: 'lblBrain', side: 1, dx: 90, dy: -80, anchor: org('brain'),
-      text: () => `Cerebro <b>86.000 M</b><small>neuronas · señales a más de 100 m/s</small>`,
+      text: () => tr(`Cerebro <b>86.000 M</b><small>neuronas · señales a más de 100 m/s</small>`, `Brain <b>86 billion</b><small>neurons · signals faster than 100 m/s</small>`),
     });
     this.add({
       key: 'lblTrial', side: 1, dx: 50, dy: 40, anchor: org('lesion'), cls: 'lbl--heat',
-      text: (dt, S) => `Nódulo <b>${num(16 * S.lesion, 1)} mm</b><small>${S.lesion < 0.5 ? 'remite con el tratamiento B' : 'evolución simulada'}</small>`,
+      text: (dt, S) => `${tr('Nódulo', 'Nodule')} <b>${num(16 * S.lesion, 1)} mm</b><small>${S.lesion < 0.5 ? tr('remite con el tratamiento B', 'shrinking under treatment B') : tr('evolución simulada', 'simulated course')}</small>`,
     });
     const mm = (v) => num(16 * v, 1);
     const trialTag = [
-      { k: 0, html: (S) => `Tratamiento B <b>83 %</b><small>nódulo ${mm(S.lesion)} mm · el elegido</small>` },
-      { k: 1, html: (S) => `Tratamiento A <b>41 %</b><small>nódulo ${mm(S.lesionA)} mm</small>` },
-      { k: 2, html: (S) => `Tratamiento C <b>62 %</b><small>nódulo ${mm(S.lesionC)} mm</small>` },
+      { k: 0, html: (S) => tr(`Tratamiento B <b>83 %</b><small>nódulo ${mm(S.lesion)} mm · el elegido</small>`, `Treatment B <b>83%</b><small>nodule ${mm(S.lesion)} mm · the chosen one</small>`) },
+      { k: 1, html: (S) => tr(`Tratamiento A <b>41 %</b><small>nódulo ${mm(S.lesionA)} mm</small>`, `Treatment A <b>41%</b><small>nodule ${mm(S.lesionA)} mm</small>`) },
+      { k: 2, html: (S) => tr(`Tratamiento C <b>62 %</b><small>nódulo ${mm(S.lesionC)} mm</small>`, `Treatment C <b>62%</b><small>nodule ${mm(S.lesionC)} mm</small>`) },
     ];
     for (const tg of trialTag) {
       const inst = tg.k === 0 ? main : ghosts[tg.k - 1];
@@ -213,26 +214,26 @@ export class Labels {
     this.add({
       key: 'lblTrial', side: 1, dx: 30, dy: 26, cls: 'lbl--lc',
       anchor: (o) => { main.bones.RightFoot.getWorldPosition(o); o.y = 0.02; return o; },
-      text: (dt, S) => `Día <b>${Math.round(S.trialT * 90)}</b> de 90<small>evolución simulada en cada gemelo</small>`,
+      text: (dt, S) => tr(`Día <b>${Math.round(S.trialT * 90)}</b> de 90<small>evolución simulada en cada gemelo</small>`, `Day <b>${Math.round(S.trialT * 90)}</b> of 90<small>simulated course in each twin</small>`),
     });
 
     // --- reloj, monitor de constantes y paciente
     this.add({
       key: 'lblWatch', side: 1, dx: 60, dy: -46, anchor: org('watch'),
-      text: () => `Reloj del paciente <b>${Math.round(vitals.bpm)} lpm</b><small>sincronizado con su gemelo</small>`,
+      text: () => tr(`Reloj del paciente <b>${Math.round(vitals.bpm)} lpm</b><small>sincronizado con su gemelo</small>`, `Patient’s watch <b>${Math.round(vitals.bpm)} bpm</b><small>synced with their twin</small>`),
     });
     this.add({
       key: 'lblVitals', side: 1, dx: 120, dy: -40,
       anchor: (o) => rings.pen(o),
       text: () => {
         const hrv = Math.round(52 - (vitals.bpm - 66) * 0.5);
-        return `Frecuencia <b>${Math.round(vitals.bpm)} lpm</b><small>VFC ${hrv} ms · SpO₂ 98 % · resp. ${Math.round(vitals.rpm)} rpm</small><small>presión 118/76 · datos simulados</small>`;
+        return tr(`Frecuencia <b>${Math.round(vitals.bpm)} lpm</b><small>VFC ${hrv} ms · SpO₂ 98 % · resp. ${Math.round(vitals.rpm)} rpm</small><small>presión 118/76 · datos simulados</small>`, `Heart rate <b>${Math.round(vitals.bpm)} bpm</b><small>HRV ${hrv} ms · SpO₂ 98% · resp. ${Math.round(vitals.rpm)}/min</small><small>BP 118/76 · simulated data</small>`);
       },
     });
     this.add({
       key: 'lblPatient', side: 1, dx: 60, dy: -70,
       anchor: (o) => main.bones.HeadTop_End.getWorldPosition(o),
-      text: () => `Paciente 001 · hab. 604 <b>estable</b><small>alta prevista mañana a las 10:00</small><small>después, seguimiento en casa con su gemelo</small>`,
+      text: () => tr(`Paciente 001 · hab. 604 <b>estable</b><small>alta prevista mañana a las 10:00</small><small>después, seguimiento en casa con su gemelo</small>`, `Patient 001 · room 604 <b>stable</b><small>discharge planned tomorrow at 10:00</small><small>then home follow-up with their twin</small>`),
     });
 
     // --- la clínica: todo lo que dicen sale de la propia simulación
@@ -241,7 +242,7 @@ export class Labels {
       anchor: (o) => clinic.at(clinic.orPos[1], 1, o),
       text: (dt, S, x) => {
         const left = 18 - Math.floor((x.t / 3) % 18);
-        return `Quirófano 2 <b>en uso</b><small>libre en ${left} min · el 4 se está preparando</small>`;
+        return tr(`Quirófano 2 <b>en uso</b><small>libre en ${left} min · el 4 se está preparando</small>`, `Theatre 2 <b>in use</b><small>free in ${left} min · theatre 4 being prepared</small>`);
       },
     });
     this.add({
@@ -249,29 +250,29 @@ export class Labels {
       anchor: (o) => clinic.at(clinic.roomPos, 6, o),
       text: (dt, S, x) => {
         const c = clinic.census(x.t);
-        return `Hospitalización <b>${Math.round((c.busy / c.total) * 100)} %</b><small>${c.total} camas · ${c.dis} altas en curso · ${c.cln} en limpieza</small>`;
+        return tr(`Hospitalización <b>${Math.round((c.busy / c.total) * 100)} %</b><small>${c.total} camas · ${c.dis} ${c.dis === 1 ? 'alta' : 'altas'} en curso · ${c.cln} en limpieza</small>`, `Wards <b>${Math.round((c.busy / c.total) * 100)}%</b><small>${c.total} beds · ${c.dis} ${c.dis === 1 ? 'discharge' : 'discharges'} under way · ${c.cln} being cleaned</small>`);
       },
     });
     this.add({
       key: 'lblClinic', side: -1, dx: 46, dy: 40,
       anchor: (o) => clinic.at(clinic.erPos, 0, o),
-      text: (dt, S, x) => `Urgencias <b>espera ${11 + Math.round(Math.sin(x.t * 0.13) * 2 + 2)} min</b><small>pico previsto a las 19:00</small>`,
+      text: (dt, S, x) => { const w = 11 + Math.round(Math.sin(x.t * 0.13) * 2 + 2); return tr(`Urgencias <b>espera ${w} min</b><small>pico previsto a las 19:00</small>`, `A&amp;E <b>${w} min wait</b><small>peak expected at 19:00</small>`); },
     });
     this.add({
       key: 'lblClinic', side: -1, dx: 40, dy: -44,
       anchor: (o) => o.copy(clinic.ambPos || clinic.erPos),
-      text: () => clinic.amb.parked ? `Ambulancia 2 <b>en urgencias</b><small>paciente en triaje</small>` : `Ambulancia 2 <b>llega en ${clinic.amb.eta} s</b><small>box 3 preparado</small>`,
+      text: () => clinic.amb.parked ? tr(`Ambulancia 2 <b>en urgencias</b><small>paciente en triaje</small>`, `Ambulance 2 <b>at A&amp;E</b><small>patient in triage</small>`) : tr(`Ambulancia 2 <b>llega en ${clinic.amb.eta} s</b><small>box 3 preparado</small>`, `Ambulance 2 <b>arriving in ${clinic.amb.eta} s</b><small>bay 3 ready</small>`),
     });
     this.add({
       key: 'lblClinic', side: 1, dx: 40, dy: -40,
       anchor: (o) => clinic.at(clinic.heliPos, 8, o),
-      text: () => `Helipuerto<small>sin operaciones previstas</small>`,
+      text: () => tr(`Helipuerto<small>sin operaciones previstas</small>`, `Helipad<small>no operations scheduled</small>`),
     });
 
     // --- cursor (sección 04)
     this.cursorItem = {
       key: 'lblCursor', side: 1, dx: 18, dy: -18, screen: true,
-      text: (dt, S, x) => `objetivo<small>x ${num(x.target.x)} · y ${num(x.target.y)} m</small>`,
+      text: (dt, S, x) => `${tr('objetivo', 'target')}<small>x ${num(x.target.x)} · y ${num(x.target.y)} m</small>`,
       live: true,
     };
     this.add(this.cursorItem);
