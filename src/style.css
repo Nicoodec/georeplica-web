@@ -563,6 +563,10 @@ body.is-live .hero__word { opacity: 1; }
   padding-right: 120px;
 }
 
+.foot__legal { display: flex; gap: 18px; }
+.foot__legal a { color: var(--bone-2); transition: color 0.3s; }
+.foot__legal a:hover { color: var(--bone); }
+
 .noscript { position: fixed; inset: auto 0 40px; text-align: center; z-index: 60; }
 
 /* ---------- pantallas estrechas ---------- */

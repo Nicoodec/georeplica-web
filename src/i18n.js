@@ -97,6 +97,7 @@ const EN = {
   conH: 'What do you want to replicate?',
   conP: 'Tell us which asset, city or territory you have in mind. We’ll get back to you with a first idea for its twin.',
   footCoord: '42.3439° N 3.6969° W',
+  footLegal: 'Legal notice', footPrivacy: 'Privacy', footCookies: 'Cookies',
 };
 
 const META = {
