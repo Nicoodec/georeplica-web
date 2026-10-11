@@ -44,7 +44,7 @@ function legalData() {
       };
       if (ok(data.razonSocial)) org.legalName = data.razonSocial;
       if (ok(data.cif)) org.taxID = data.cif;
-      if (ok(data.domicilio)) org.address = { '@type': 'PostalAddress', streetAddress: data.domicilio, addressCountry: 'ES' };
+      if (ok(data.calle)) org.address = { '@type': 'PostalAddress', streetAddress: data.calle, postalCode: data.codigoPostal, addressLocality: data.localidad, addressCountry: 'ES' };
       const ld = {
         '@context': 'https://schema.org',
         '@graph': [org, { '@type': 'WebSite', '@id': 'https://georeplica.ai/#web', url: 'https://georeplica.ai/', name: 'GeoReplica', inLanguage: ['es', 'en'], publisher: { '@id': 'https://georeplica.ai/#org' } }],

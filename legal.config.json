@@ -1,14 +1,17 @@
 {
-  "razonSocial": "PENDIENTE: razón social exacta (p. ej. GeoReplica Technologies, S.L.)",
-  "cif": "PENDIENTE: CIF",
-  "domicilio": "PENDIENTE: domicilio social completo",
-  "registro": "PENDIENTE: Registro Mercantil de …, tomo …, folio …, hoja …",
+  "razonSocial": "Georeplica Technologies, S.L.",
+  "cif": "B19731199",
+  "domicilio": "Calle General Álvarez de Castro, 41, esc. izq., planta 1, puerta 10, 28010 Madrid (España)",
+  "registro": "Registro Mercantil de Madrid, hoja M-824879, inscripción 1.ª (folio electrónico)",
   "email": "info@georeplica.com",
   "web": "georeplica.ai",
-  "tribunales": "PENDIENTE: ciudad del domicilio social",
+  "tribunales": "Madrid",
   "hosting": "Cloudflare, Inc.",
   "hostingSede": "101 Townsend St., San Francisco, CA 94107, EE. UU.",
   "hostingSedeEn": "101 Townsend St., San Francisco, CA 94107, USA",
   "fecha": "11 de octubre de 2026",
-  "fechaEn": "11 October 2026"
+  "fechaEn": "11 October 2026",
+  "calle": "Calle General Álvarez de Castro, 41, esc. izq., planta 1, puerta 10",
+  "codigoPostal": "28010",
+  "localidad": "Madrid"
 }
