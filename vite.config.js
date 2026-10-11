@@ -12,11 +12,44 @@ function legalData() {
   return {
     name: 'legal-data',
     configureServer(server) {
+      // solo en desarrollo: guarda una captura del lienzo 3D (para la imagen de compartir)
+      server.middlewares.use('/__save-capture', (req, res) => {
+        const chunks = [];
+        req.on('data', (c) => chunks.push(c));
+        req.on('end', () => {
+          fs.mkdirSync(resolve(__dirname, 'brand'), { recursive: true });
+          fs.writeFileSync(resolve(__dirname, 'brand', 'og-figure.png'), Buffer.concat(chunks));
+          res.end('ok');
+        });
+      });
       server.watcher.add(file);
       server.watcher.on('change', (f) => { if (f === file) server.ws.send({ type: 'full-reload' }); });
     },
     transformIndexHtml(html) {
       const data = read();
+      const ok = (v) => v && !/PENDIENTE/.test(v);
+      // ficha de empresa para Google (datos estructurados); lo pendiente simplemente no se incluye
+      const org = {
+        '@type': 'Organization',
+        '@id': 'https://georeplica.ai/#org',
+        name: 'GeoReplica Technologies',
+        alternateName: 'GeoReplica',
+        url: 'https://georeplica.ai/',
+        logo: 'https://georeplica.ai/logo-georeplica.png',
+        image: 'https://georeplica.ai/og-image.jpg',
+        email: data.email,
+        slogan: 'Internet of Twins',
+        description: 'Gemelos digitales conectados en tiempo real para salud, ciudades inteligentes, Industria 4.0 y territorio.',
+        knowsAbout: ['Gemelos digitales', 'Digital twins', 'Salud digital', 'Ciudades inteligentes', 'Industria 4.0', 'GIS', 'LiDAR', 'IoT'],
+      };
+      if (ok(data.razonSocial)) org.legalName = data.razonSocial;
+      if (ok(data.cif)) org.taxID = data.cif;
+      if (ok(data.domicilio)) org.address = { '@type': 'PostalAddress', streetAddress: data.domicilio, addressCountry: 'ES' };
+      const ld = {
+        '@context': 'https://schema.org',
+        '@graph': [org, { '@type': 'WebSite', '@id': 'https://georeplica.ai/#web', url: 'https://georeplica.ai/', name: 'GeoReplica', inLanguage: ['es', 'en'], publisher: { '@id': 'https://georeplica.ai/#org' } }],
+      };
+      html = html.replace('<!--jsonld-->', `<script type="application/ld+json">${JSON.stringify(ld)}</script>`);
       return html.replace(/\{\{(\w+)\}\}/g, (m, k) => {
         if (!(k in data)) return m;
         const v = esc(data[k]);

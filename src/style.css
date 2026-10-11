@@ -451,7 +451,7 @@ body.is-live .hero__word { opacity: 1; }
   z-index: 5;
   left: calc(var(--gutter) + var(--rail) + 40px);
   bottom: 13vh;
-  max-width: 9.5ch;
+  max-width: 11ch;
   font-size: clamp(44px, 5.6vw, 96px);
   font-stretch: 68%;
   font-weight: 300;

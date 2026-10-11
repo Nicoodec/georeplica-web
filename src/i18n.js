@@ -12,7 +12,7 @@ const EN = {
   coord: '42.3439° N&nbsp;&nbsp;3.6969° W',
   navTwin: 'Twin', navHealth: 'Health', navTerritory: 'Territory', navPlatform: 'Platform', navContact: 'Contact',
   heroTag: 'Subject 001 &mdash; live replica &mdash; <span id="ptsCount">0</span> points',
-  heroTitle: 'Everything that exists can have a twin.',
+  heroTitle: 'Everything that exists can have a digital twin.',
   heroText: 'Digital twins connected in real time to people, clinics, cities and territories. An exact copy of the physical world that doesn’t just show it: it understands it, anticipates it and improves it.',
   heroScroll: 'Scroll. It will show you.',
 
@@ -101,8 +101,8 @@ const EN = {
 };
 
 const META = {
-  es: { title: 'GeoReplica Technologies — Internet of Twins', desc: 'Gemelos digitales conectados en tiempo real a personas, clínicas, ciudades y territorios.' },
-  en: { title: 'GeoReplica Technologies — Internet of Twins', desc: 'Digital twins connected in real time to people, clinics, cities and territories.' },
+  es: { title: 'GeoReplica · Gemelos digitales para salud, ciudades e industria', desc: 'GeoReplica Technologies crea gemelos digitales conectados en tiempo real para clínicas, ciudades inteligentes, Industria 4.0 y territorio. Internet of Twins.' },
+  en: { title: 'GeoReplica · Digital twins for healthcare, cities and industry', desc: 'GeoReplica Technologies builds real-time digital twins for clinics, smart cities, Industry 4.0 and land management. Internet of Twins.' },
 };
 
 const ES = {};
@@ -126,6 +126,7 @@ function apply(l) {
   document.title = META[l].title;
   document.querySelector('meta[name="description"]')?.setAttribute('content', META[l].desc);
   document.querySelector('meta[property="og:description"]')?.setAttribute('content', META[l].desc);
+  document.querySelector('meta[property="og:title"]')?.setAttribute('content', META[l].title);
   const url = l === 'en' ? 'https://georeplica.ai/?lang=en' : 'https://georeplica.ai/';
   document.querySelector('link[rel="canonical"]')?.setAttribute('href', url);
   document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
