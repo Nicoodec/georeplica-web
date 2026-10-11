@@ -15,10 +15,12 @@ function legalData() {
       // solo en desarrollo: guarda una captura del lienzo 3D (para la imagen de compartir)
       server.middlewares.use('/__save-capture', (req, res) => {
         const chunks = [];
+        const name = (new URL(req.url, 'http://x').searchParams.get('name') || 'og-figure').replace(/[^\w-]/g, '');
+        const dir = name === 'og-figure' ? resolve(__dirname, 'brand') : resolve(__dirname, 'node_modules', '.captures');
         req.on('data', (c) => chunks.push(c));
         req.on('end', () => {
-          fs.mkdirSync(resolve(__dirname, 'brand'), { recursive: true });
-          fs.writeFileSync(resolve(__dirname, 'brand', 'og-figure.png'), Buffer.concat(chunks));
+          fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(resolve(dir, name + '.png'), Buffer.concat(chunks));
           res.end('ok');
         });
       });

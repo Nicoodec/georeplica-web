@@ -133,7 +133,7 @@ const TERRAIN_VERT = /* glsl */ `
     vGlyph = glyph;
     float far = 1.0 + clamp((camD - 60.0) / 120.0, 0.0, 1.0) * 1.1; // de lejos los puntos son menudos: se compensa
     vAlpha = clamp(bright * far, 0.0, 2.2) * shown * fog * edgeFade * uOpacity;
-    gl_PointSize = size * uProj / -mv.z;
+    gl_PointSize = max(size * uProj / -mv.z, 1.6);
   }
 `;
 
@@ -189,7 +189,7 @@ const STRUCT_VERT = /* glsl */ `
     float dotty = step(hash11(aRand.x * 5.3), 0.55) * (1.0 - win) * (1.0 - alarm) * (1.0 - edge);
     vGlyph = mix(flipGlyph(aRand.x, aRand.y * uFlick * 0.6, uTime), 2.0, dotty);
     vAlpha = bright * step(0.002, rise) * fog * uOpacity;
-    gl_PointSize = uSize * (0.8 + 0.4 * hash11(aRand.x * 3.0)) * mix(1.0, 0.6, dotty) * uProj / -mv.z;
+    gl_PointSize = max(uSize * (0.8 + 0.4 * hash11(aRand.x * 3.0)) * mix(1.0, 0.6, dotty) * uProj / -mv.z, 1.6);
   }
 `;
 
@@ -216,7 +216,7 @@ const ARC_VERT = /* glsl */ `
     vColor = mix(vec3(0.62, 0.78, 1.0), vec3(0.22, 0.56, 1.0), packet);
     vGlyph = mix(2.0, flipGlyph(aArc.z, 14.0, uTime), packet);
     vAlpha = (0.32 + packet * 1.9) * reveal * fog * uOpacity;
-    gl_PointSize = uSize * (0.45 + packet * 1.1) * uProj / -mv.z;
+    gl_PointSize = max(uSize * (0.45 + packet * 1.1) * uProj / -mv.z, 1.6);
   }
 `;
 
@@ -260,7 +260,7 @@ const BEACON_VERT = /* glsl */ `
     vColor = blue;
     vGlyph = glyph;
     vAlpha = alpha * fog * uOpacity * uSensors;
-    gl_PointSize = size * uProj / -mv.z;
+    gl_PointSize = max(size * uProj / -mv.z, 1.6);
   }
 `;
 

@@ -263,8 +263,23 @@ async function start() {
     layout[0].el.querySelectorAll('[data-scramble]').forEach(scramble);
   }, reduced ? 0 : 1500);
 
-  if (import.meta.env.DEV) window.go = (id, p) => { lenis.resize(); const L = layout.find((l) => l.el.id === id); lenis.scrollTo(L.top + Math.max(L.h - innerHeight, 0) * p, { immediate: true }); };
+  if (import.meta.env.DEV) window.go = (id, p) => { lenis.resize(); const L = layout.find((l) => l.el.id === id); lenis.scrollTo(L.top + Math.max(L.h - innerHeight, 0) * p, { immediate: true }); snapNext = true; };
   if (import.meta.env.DEV) window.__dbg = { lenis, layout: () => layout, clinic, vitals, figure, main, ghosts, camera, state, target, territory, scene, renderer, shared };
+  if (import.meta.env.DEV) {
+    // captura de una sección, aunque el navegador esté en segundo plano (no hay requestAnimationFrame)
+    window.__shot = async (id, p, name) => {
+      assembleT0 = 1; // figura ya ensamblada
+      window.go(id, p);
+      let t = performance.now();
+      for (let i = 0; i < 4; i++) step((t += 16));
+      renderer.setClearColor(0x060708, 1); // fondo opaco, como se ve en pantalla
+      renderer.render(scene, camera);
+      const blob = await new Promise((r) => renderer.domElement.toBlob(r, 'image/png'));
+      renderer.setClearColor(0x000000, 0);
+      await fetch('/__save-capture?name=' + name, { method: 'POST', body: blob });
+      return name;
+    };
+  }
   if (import.meta.env.DEV) window.__tear = () => { tear.next = 0; };
   if (import.meta.env.DEV) window.__replay = () => { assembleT0 = performance.now(); };
   if (import.meta.env.DEV) {
@@ -285,6 +300,7 @@ function fillCounts() {
 }
 
 let assembleT0 = 0;
+let snapNext = false;
 let last = performance.now();
 let nextGlitch = 3;
 let glitchUntil = 0;
@@ -303,6 +319,10 @@ let fps = 60;
 
 function loop(now) {
   requestAnimationFrame(loop);
+  step(now);
+}
+
+function step(now) {
   const dt = Math.min((now - last) / 1000, 1 / 20);
   last = now;
   fps = lerp(fps, 1 / Math.max(dt, 1e-3), 0.05);
@@ -326,6 +346,8 @@ function loop(now) {
     state.figOpacity = 0;
     glitchUntil = performance.now() / 1000 + 0.35;
   }
+  // atajo de desarrollo: al saltar de sección, colocar la escena sin esperar a la transición
+  if (snapNext) { snapNext = false; for (const k in target) if (typeof target[k] === 'number') state[k] = target[k]; }
   const S = state;
 
   // ensamblado inicial
@@ -379,7 +401,7 @@ function loop(now) {
   camera.position.copy(camPos);
   camera.lookAt(camTgt);
   const w = innerWidth, h = innerHeight;
-  if (Math.abs(S.shift) > 0.001) camera.setViewOffset(w, h, -S.shift * w, 0, w, h);
+  if (Math.abs(S.shift) > 0.001 || Math.abs(S.shiftY) > 0.001) camera.setViewOffset(w, h, -S.shift * w, S.shiftY * h, w, h);
   else camera.clearViewOffset();
   camera.updateMatrixWorld();
 
@@ -482,7 +504,7 @@ function loop(now) {
     if (!g.visible) return;
     if (trialMode) {
       const sd = g.k === 1 ? -1 : 1;
-      g.holder.position.set(S.figX + sd * 1.2, 0, S.figZ - 0.35);
+      g.holder.position.set(S.figX + sd * S.trialGap, 0, S.figZ - 0.35);
       g.holder.rotation.y = S.figRot - sd * 0.22;
       g.actions.walk.setEffectiveWeight(0);
       g.actions.idle.setEffectiveWeight(1);
@@ -511,7 +533,7 @@ function loop(now) {
   floor.visible = S.floor > 0.002;
 
   territory.update(S, camera.position, camTgt);
-  clinic.update(S, camera.position, t);
+  clinic.update(S, camera.position, t, camTgt);
   rings.update(S.ecg, S.resp, vitals, S.figOpacity);
 
   renderer.render(scene, camera);

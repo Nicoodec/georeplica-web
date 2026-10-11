@@ -23,6 +23,7 @@ const CLINIC_VERT = /* glsl */ `
   ${GLSL_COMMON}
   uniform float uTime, uSize, uProj, uOpacity, uFlick, uBuild, uExplode, uFocus;
   uniform vec3 uCam;
+  uniform vec2 uFog;
   uniform vec3 uAmb;   // posición de la ambulancia
   uniform float uAmbYaw;
   attribute vec4 aH;   // planta, tipo, semilla, estado
@@ -104,7 +105,7 @@ const CLINIC_VERT = /* glsl */ `
     vec4 mv = viewMatrix * vec4(wp, 1.0);
     gl_Position = projectionMatrix * mv;
     float camD = length(wp - uCam);
-    float fog = (1.0 - smoothstep(70.0, 150.0, camD)) * smoothstep(2.5, 9.0, camD);
+    float fog = (1.0 - smoothstep(uFog.x, uFog.y, camD)) * smoothstep(2.5, 9.0, camD);
     float shown = (ground || amb) ? step(0.02, uBuild) : step(0.001, rise);
     // al entrar en la 604, el edificio se disuelve y solo queda su planta
     float keep = abs(fl - 6.0) < 0.5 ? 1.0 : 0.0;
@@ -113,7 +114,7 @@ const CLINIC_VERT = /* glsl */ `
     vColor = col;
     vGlyph = glyph;
     vAlpha = a * shown * fog * uOpacity;
-    gl_PointSize = size * (0.8 + 0.4 * hash11(aRand.x * 9.0)) * mix(1.0, 0.6, step(1.5, glyph)) * uProj / -mv.z;
+    gl_PointSize = max(size * (0.8 + 0.4 * hash11(aRand.x * 9.0)) * mix(1.0, 0.6, step(1.5, glyph)) * uProj / -mv.z, 1.6);
   }
 `;
 
@@ -140,7 +141,7 @@ const FLOW_VERT = /* glsl */ `
     vColor = mix(vec3(0.55, 0.75, 1.0), vec3(0.22, 0.56, 1.0), packet);
     vGlyph = mix(2.0, flipGlyph(aF.z, 14.0, uTime), packet);
     vAlpha = (0.2 + packet * 1.3) * reveal * step(0.99, uBuild) * uOpacity;
-    gl_PointSize = uSize * (0.5 + packet * 1.0) * uProj / -mv.z;
+    gl_PointSize = max(uSize * (0.5 + packet * 1.0) * uProj / -mv.z, 1.6);
   }
 `;
 
@@ -159,7 +160,7 @@ const AGENT_VERT = /* glsl */ `
     vColor = mix(vec3(0.95, 0.94, 0.9), vec3(0.3, 0.62, 1.0), aA.x);
     vGlyph = flipGlyph(aA.y, 9.0, uTime);
     vAlpha = 0.95 * uOpacity;
-    gl_PointSize = uSize * (aA.z > 0.5 ? 1.25 : 1.0) * uProj / -mv.z;
+    gl_PointSize = max(uSize * (aA.z > 0.5 ? 1.25 : 1.0) * uProj / -mv.z, 1.6);
   }
 `;
 
@@ -334,7 +335,7 @@ export class Clinic {
 
     this.u = {
       uOpacity: { value: 0 }, uBuild: { value: 0 }, uExplode: { value: 0 }, uFlows: { value: 0 },
-      uFocus: { value: 0 }, uCam: { value: new THREE.Vector3() }, uAmb: { value: new THREE.Vector3(-60, 0, 0) }, uAmbYaw: { value: 0 },
+      uFocus: { value: 0 }, uCam: { value: new THREE.Vector3() }, uFog: { value: new THREE.Vector2(70, 150) }, uAmb: { value: new THREE.Vector3(-60, 0, 0) }, uAmbYaw: { value: 0 },
     };
     const common = { uTime: shared.uTime, uProj: shared.uProj, uFlick: shared.uFlick, uAtlas: shared.uAtlas };
     this.points = new THREE.Points(geo, new THREE.ShaderMaterial({
@@ -465,13 +466,16 @@ export class Clinic {
     return { total: this.rooms.length + 1, busy, dis, cln };
   }
 
-  update(s, camPos, t) {
+  update(s, camPos, t, camTgt) {
     this.u.uOpacity.value = s.clinic * s.clinic; // se va antes que la cámara
     this.u.uBuild.value = s.build;
     this.u.uExplode.value = s.explode;
     this.u.uFlows.value = s.flows;
     this.u.uFocus.value = s.focus604;
     this.u.uCam.value.copy(camPos);
+    // la niebla acompaña a la cámara: si se aleja (móvil), la clínica no se pierde en ella
+    const d = camTgt ? camPos.distanceTo(camTgt) : 60;
+    this.u.uFog.value.set(Math.max(70, d * 1.15), Math.max(150, d * 2.3));
     const on = s.clinic > 0.002;
     this.points.visible = on;
     this.flows.visible = on && s.flows > 0.002;

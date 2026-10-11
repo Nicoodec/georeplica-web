@@ -205,7 +205,7 @@ export class Labels {
     for (const tg of trialTag) {
       const inst = tg.k === 0 ? main : ghosts[tg.k - 1];
       this.add({
-        key: 'lblTrial', side: 0, dy: -30, cls: 'lbl--lc',
+        key: 'lblTrial', side: 0, dy: -30, dyM: [-30, -84, -138][tg.k], cls: 'lbl--lc',
         weight: tg.k === 0 ? undefined : () => inst.opacity / 0.62,
         anchor: (o) => { inst.bones.HeadTop_End.getWorldPosition(o); o.y += 0.1; return o; },
         text: (dt, S) => tg.html(S),
@@ -338,7 +338,8 @@ export class Labels {
       ctx.lineWidth = 1;
       let tx, ty;
       if (it.side === 0) {
-        const ey = y + it.dy;
+        // en pantallas estrechas, los rótulos centrados que estarían juntos se escalonan
+        const ey = y + (w < 820 && it.dyM !== undefined ? it.dyM : it.dy);
         ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, ey); ctx.stroke();
         tx = x; ty = ey - 16;
         it.el.style.transform = `translate3d(${tx}px, ${ty}px, 0) translateX(-50%)`;

@@ -13,7 +13,7 @@ const bell = (p, a, b) => {
 
 export const DEFAULTS = {
   figX: 0, figZ: 0, figRot: 0, figOpacity: 1,
-  camX: 0, camY: 1.08, camZ: 5.0, tgtX: 0, tgtY: 0.98, tgtZ: 0, shift: 0, parallax: 1,
+  camX: 0, camY: 1.08, camZ: 5.0, tgtX: 0, tgtY: 0.98, tgtZ: 0, shift: 0, shiftY: 0, parallax: 1,
   scanOn: 0, scanY: 2.1, pulse: 0, ghosts: 0, walk: 0, lookW: 0.9, pointW: 0,
   floor: 1, terrain: 0, reveal: 0, city: 0, industry: 0, rural: 0, sensors: 0, fire: 0, fireT: 0, net: 0,
   spark: 1, glyphSize: 0.036,
@@ -23,7 +23,7 @@ export const DEFAULTS = {
   // salud
   interior: 0, skin: 1, fHeart: 0, fBrain: 0, fLesion: 0, nerves: 0, lesion: 1, vessels: 1,
   trial: 0, ecg: 0, resp: 0, hrReact: 0, clinic: 0, build: 0, explode: 0, flows: 0,
-  figY: 0, figTilt: 0, focus604: 0, reachW: 0, watch: 0, trialT: 0, lesionA: 1, lesionC: 1,
+  figY: 0, figTilt: 0, focus604: 0, reachW: 0, trialGap: 1.2, watch: 0, trialT: 0, lesionA: 1, lesionC: 1,
   lblOrgans: 0, lblHeart: 0, lblBrain: 0, lblTrial: 0, lblClinic: 0, lblWatch: 0, lblVitals: 0, lblPatient: 0,
 };
 
@@ -185,28 +185,57 @@ export const KEYS = {
   }),
 };
 
-// En móvil el texto va abajo: la figura se centra y sube, el territorio no se desplaza
+// En móvil el texto ocupa la mitad de abajo: la escena tiene que caber en el hueco de arriba.
+// En ordenador las escenas amplias se encuadran en la parte derecha de una pantalla ancha
+// (un hueco casi cuadrado y grande); en un móvil vertical ese hueco es ~2,1 veces más pequeño,
+// así que la cámara se aleja en esa proporción y la escena se sube con un desplazamiento de vista.
 export function mobileAdjust(s) {
-  const onFigure = s.terrain < 0.5 && s.clinic < 0.5; // en la clínica la figura no se recoloca
   s.shift = 0;
-  if (onFigure) {
-    const keepX = s.ghosts > 0.5 ? 0.5 : 0;
-    s.figX *= keepX;
-    s.tgtX = s.tgtX * keepX;
-    s.camX *= 0.25;
-    s.camZ += 1.7 + s.ghosts * 2.6 + s.mHero * 1.1;
-    s.tgtY += -0.5 + s.mHero * 0.42;
-  } else if (s.terrain >= 0.5) {
-    s.tgtY -= 6;
-    s.camZ *= 1.15;
-  }
-  // escenas anchas (clínica, tres gemelos): en vertical hay que alejarse más
+  const wide = Math.max(s.terrain, s.clinic); // territorio y clínica
   const inBed = s.figTilt;
-  const m = 1 + 0.95 * s.clinic * (1 - inBed * 0.55) + 1.2 * s.trial;
-  if (m > 1.001) {
-    s.camX = s.tgtX + (s.camX - s.tgtX) * m;
-    s.camY = s.tgtY + (s.camY - s.tgtY) * m;
-    s.camZ = s.tgtZ + (s.camZ - s.tgtZ) * m;
-    s.tgtY -= 9 * s.clinic * (1 - inBed) + 0.35 * s.trial + 0.95 * inBed;
+  const sm = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+  const lp = (a, b, t) => a + (b - a) * t;
+  const KEYS_CAM = ['camX', 'camY', 'camZ', 'tgtX', 'tgtY', 'tgtZ', 'figX', 'shiftY'];
+
+  // A) planos de la figura
+  const A = { ...s };
+  {
+    // la figura se centra (salvo los fantasmas, que necesitan su recorrido)
+    const keepX = A.ghosts > 0.5 ? 0.5 : 0;
+    const dx0 = A.camX - A.tgtX;
+    A.figX *= keepX;
+    A.tgtX *= keepX;
+    const dx = dx0 * 0.25, dy = A.camY - A.tgtY, dz = A.camZ - A.tgtZ;
+    const dist = Math.hypot(dx, dy, dz) || 1;
+    // plano general (figura entera) o primer plano (corazón, cerebro)
+    const full = sm(2.6, 3.6, dist) * (1 - A.mHero);
+    // plano general: la figura (1,80 m) ocupa el 40 % del alto en la mitad de arriba;
+    // con los fantasmas o los tres gemelos hace falta más campo a lo ancho
+    const D = lp(dist * 1.25, Math.max(dist, 7.6 + 3.2 * A.ghosts + 5 * A.trial), full);
+    A.tgtY = lp(A.tgtY, 0.95, full);
+    const k = D / dist;
+    A.camX = A.tgtX + dx * k;
+    A.camY = A.tgtY + dy * k;
+    A.camZ = A.tgtZ + dz * k + A.mHero * 2.8; // portada: su propio encuadre
+    A.tgtY += A.mHero * -0.08;
+    A.shiftY = 0.22 * full + 0.16 * (1 - full) * (1 - A.mHero);
   }
+
+  // B) territorio y clínica: el hueco de arriba es ~2 veces más pequeño que en ordenador
+  const B = { ...s };
+  {
+    // la clínica desplegada crece hacia arriba: algo más de distancia y encuadre más bajo
+    const tall = B.explode * (1 - inBed) * (1 - B.terrain);
+    const m = 1 + (1.1 * B.terrain + (0.75 + 0.4 * tall) * B.clinic * (1 - B.terrain)) * (1 - inBed * 0.75);
+    B.camX = B.tgtX + (B.camX - B.tgtX) * m;
+    B.camY = B.tgtY + (B.camY - B.tgtY) * m;
+    B.camZ = B.tgtZ + (B.camZ - B.tgtZ) * m;
+    B.shiftY = 0.2 - 0.09 * tall;
+  }
+
+  // se mezclan durante la transición, sin saltos
+  const w = sm(0.25, 0.75, wide);
+  for (const k of KEYS_CAM) s[k] = lp(A[k], B[k], w);
+  // los tres gemelos del ensayo, más juntos: caben sin alejarse tanto
+  s.trialGap = 0.8;
 }
