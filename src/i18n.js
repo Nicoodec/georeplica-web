@@ -124,6 +124,10 @@ function apply(l) {
   document.documentElement.lang = l;
   document.title = META[l].title;
   document.querySelector('meta[name="description"]')?.setAttribute('content', META[l].desc);
+  document.querySelector('meta[property="og:description"]')?.setAttribute('content', META[l].desc);
+  const url = l === 'en' ? 'https://georeplica.ai/?lang=en' : 'https://georeplica.ai/';
+  document.querySelector('link[rel="canonical"]')?.setAttribute('href', url);
+  document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
   for (const el of els) {
     const html = l === 'en' ? EN[el.dataset.i18n] : ES[el.dataset.i18n];
     if (html !== undefined) el.innerHTML = html;
@@ -131,11 +135,11 @@ function apply(l) {
 }
 
 function paintButton() {
-  const b = document.getElementById('langBtn');
-  if (!b) return;
-  b.classList.toggle('is-en', lang === 'en');
-  b.setAttribute('aria-label', lang === 'en' ? 'Ver en español' : 'View in English');
-  b.querySelector('.lang__code').textContent = lang === 'en' ? 'ES' : 'EN';
+  document.querySelectorAll('#langBtn .lang__opt').forEach((b) => {
+    const on = b.dataset.l === lang;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
 }
 
 // cambia de idioma; `after` vuelve a montar lo que depende del texto (palabras partidas, etc.)

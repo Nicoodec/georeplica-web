@@ -6,6 +6,16 @@
   <title>GeoReplica Technologies — Internet of Twins</title>
   <meta name="description" content="Gemelos digitales conectados en tiempo real a personas, ciudades, industrias y territorios." />
   <meta name="theme-color" content="#060708" />
+  <link rel="canonical" href="https://georeplica.ai/" />
+  <link rel="alternate" hreflang="es" href="https://georeplica.ai/" />
+  <link rel="alternate" hreflang="en" href="https://georeplica.ai/?lang=en" />
+  <link rel="alternate" hreflang="x-default" href="https://georeplica.ai/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="GeoReplica Technologies" />
+  <meta property="og:title" content="GeoReplica Technologies — Internet of Twins" />
+  <meta property="og:description" content="Gemelos digitales conectados en tiempo real a personas, clínicas, ciudades y territorios." />
+  <meta property="og:url" content="https://georeplica.ai/" />
+  <meta name="twitter:card" content="summary" />
   <link rel="icon" href="./mark.svg" type="image/svg+xml" />
   <link rel="preload" href="./models/Xbot.glb" as="fetch" crossorigin />
 </head>
@@ -51,11 +61,10 @@
       <a href="#territorio" data-goto="territorio" data-i18n="navTerritory">Territorio</a>
       <a href="#plataforma" data-goto="plataforma" data-i18n="navPlatform">Plataforma</a>
       <a href="#contacto" data-goto="contacto" class="top__cta" data-i18n="navContact">Contacto</a>
-      <button class="lang" id="langBtn" type="button" aria-label="View in English">
-        <svg class="lang__flag lang__flag--uk" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0 0v30h60V0z"/></clipPath><clipPath id="ukT"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><g clip-path="url(#ukS)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>
-        <svg class="lang__flag lang__flag--es" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#c60b1e"/><rect y=".5" width="3" height="1" fill="#ffc400"/></svg>
-        <span class="lang__code">EN</span>
-      </button>
+      <div class="lang" id="langBtn" role="group" aria-label="Idioma / Language">
+        <button type="button" class="lang__opt is-active" data-l="es" aria-pressed="true" lang="es" title="Español"><svg class="lang__flag" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#c60b1e"/><rect y=".5" width="3" height="1" fill="#ffc400"/></svg><span>ES</span></button>
+        <button type="button" class="lang__opt" data-l="en" aria-pressed="false" lang="en" title="English"><svg class="lang__flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0 0v30h60V0z"/></clipPath><clipPath id="ukT"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><g clip-path="url(#ukS)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg><span>EN</span></button>
+      </div>
     </nav>
   </header>
 

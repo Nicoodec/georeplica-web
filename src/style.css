@@ -244,24 +244,30 @@ a { color: inherit; text-decoration: none; }
 .top__nav { align-items: center; }
 .lang {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 4px;
-  padding: 6px 10px 6px 8px;
+  margin-left: 6px;
+  padding: 2px;
   border: 1px solid var(--hair);
+  border-radius: 3px;
+}
+.lang__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 0;
   border-radius: 2px;
   background: transparent;
-  color: var(--bone-2);
+  color: var(--bone-3);
   font: inherit;
   letter-spacing: inherit;
   cursor: pointer;
-  transition: border-color 0.3s, color 0.3s;
+  transition: background 0.3s, color 0.3s;
 }
-.lang:hover, .lang:focus-visible { border-color: var(--bone-3); color: var(--bone); outline: none; }
-.lang__flag { width: 20px; height: 12px; display: block; flex: none; box-shadow: 0 0 0 1px rgba(233, 231, 226, 0.18); opacity: 0.9; }
-.lang__flag--es { display: none; }
-.lang.is-en .lang__flag--uk { display: none; }
-.lang.is-en .lang__flag--es { display: block; }
+.lang__opt:hover { color: var(--bone); }
+.lang__opt:focus-visible { outline: 1px solid var(--signal); outline-offset: 1px; }
+.lang__opt.is-active { background: rgba(233, 231, 226, 0.12); color: var(--bone); cursor: default; }
+.lang__flag { width: 18px; height: 11px; display: block; flex: none; box-shadow: 0 0 0 1px rgba(233, 231, 226, 0.18); filter: grayscale(1) brightness(0.8); opacity: 0.55; transition: filter 0.3s, opacity 0.3s; }
+.lang__opt.is-active .lang__flag, .lang__opt:hover .lang__flag { filter: none; opacity: 1; }
 
 /* ---------- regla lateral ---------- */
 

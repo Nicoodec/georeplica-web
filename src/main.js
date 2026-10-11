@@ -215,8 +215,10 @@ async function start() {
   rings = new VitalRings(main.holder, shared, new THREE.Vector3(0.012, 1.275, 0.02));
 
   fillCounts();
-  $('#langBtn').addEventListener('click', () => {
-    setLang(lang === 'en' ? 'es' : 'en', (els) => {
+  $('#langBtn').addEventListener('click', (e) => {
+    const opt = e.target.closest('[data-l]');
+    if (!opt) return;
+    setLang(opt.dataset.l, (els) => {
       for (const el of els) {
         if (el.hasAttribute('data-split')) splitEl(el);
         if (el.hasAttribute('data-scramble')) { prepScramble(el); if (el.closest('.is-in')) scramble(el); }
